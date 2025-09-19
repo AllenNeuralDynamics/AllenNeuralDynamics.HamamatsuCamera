@@ -1,0 +1,10 @@
+.bonsai/Bonsai.exe*
+.bonsai/Packages/
+.bonsai/Settings/
+.vs/
+/artifacts/
+bin/
+obj/
+*.user
+*.suo
+*.layout
