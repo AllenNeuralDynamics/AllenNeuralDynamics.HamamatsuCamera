@@ -1,4 +1,4 @@
-﻿using HamamatsuCamera.API;
+﻿using AllenNeuralDynamics.HamamatsuCamera.API;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using ZedGraph;
 
-namespace HamamatsuCamera.Visualizers
+namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
 {
     public partial class Component1 : UserControl
     {

@@ -1,6 +1,5 @@
 ﻿using Bonsai.Design;
-using HamamatsuCamera.API;
-
+using AllenNeuralDynamics.HamamatsuCamera.API;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,7 +14,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 
-namespace HamamatsuCamera.Calibration
+namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
     public partial class CalibrationForm : Form
     {

@@ -5,7 +5,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
 
-namespace HamamatsuCamera.API
+namespace AllenNeuralDynamics.HamamatsuCamera.API
 {
     // ================================ DCAM_API_MANAGER ================================
 

@@ -1,6 +1,6 @@
 ﻿using Bonsai;
 
-using HamamatsuCamera.Factories;
+using AllenNeuralDynamics.HamamatsuCamera.Factories;
 
 using System;
 using System.ComponentModel;
@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 
-namespace HamamatsuCamera
+namespace AllenNeuralDynamics.HamamatsuCamera
 {
     public class TiffWriter
     {

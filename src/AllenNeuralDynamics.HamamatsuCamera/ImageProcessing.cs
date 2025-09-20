@@ -1,7 +1,7 @@
 ﻿using Bonsai;
 using Bonsai.IO;
-using HamamatsuCamera.API;
-using HamamatsuCamera.Factories;
+using AllenNeuralDynamics.HamamatsuCamera.API;
+using AllenNeuralDynamics.HamamatsuCamera.Factories;
 
 using System;
 using System.Collections.Generic;
@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using OpenCV.Net;
 using System.Runtime.InteropServices;
 using System.Reflection;
+
 
 public static class DcamInterop
 {
@@ -84,7 +85,7 @@ public static class DcamInterop
     }
 }
 
-namespace HamamatsuCamera
+namespace AllenNeuralDynamics.HamamatsuCamera
 {
 
     /// <summary>
@@ -128,7 +129,7 @@ namespace HamamatsuCamera
                 fileName = PathHelper.AppendSuffix(fileName, Props.Suffix);
                 //PathHelper.EnsureDirectory(DebugPath);
                 //DebugPath = PathHelper.AppendSuffix(DebugPath, PathSuffix.FileCount);
-                
+
                 // Verify that if the file already exists, the user gave permission to overwrite it.
                 if (File.Exists(fileName) && !Props.Overwrite)
                     throw new IOException(string.Format("The file '{0}' already exists.", fileName));
@@ -138,15 +139,15 @@ namespace HamamatsuCamera
                 //DebugWriter = new StreamWriter(DebugPath);
 
                 var columns = new List<string>()
-                {
-                    nameof(Frame.Width),
-                    nameof(Frame.Height),
-                    nameof(Frame.Left),
-                    nameof(Frame.Top),
-                    nameof(Frame.Framestamp),
-                    nameof(Frame.ComputerTimestamp),
-                    nameof(Frame.CameraTimestamp)
-                };
+            {
+                nameof(Frame.Width),
+                nameof(Frame.Height),
+                nameof(Frame.Left),
+                nameof(Frame.Top),
+                nameof(Frame.Framestamp),
+                nameof(Frame.ComputerTimestamp),
+                nameof(Frame.CameraTimestamp)
+            };
 
                 for (int i = 0; i < Props.Regions.Count; i++)
                     columns.Add(RegionLabel + i);
@@ -156,7 +157,7 @@ namespace HamamatsuCamera
                 var header = string.Join(ListSeparator, columns);
                 Writer.WriteLine(header);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine($"Error: CreateWriter\nMessage: {ex.Message}");
             }
@@ -177,15 +178,15 @@ namespace HamamatsuCamera
                 }
 
                 var values = new List<string>()
-                {
-                    frame.Width.ToString(CultureInfo.InvariantCulture),
-                    frame.Height.ToString(CultureInfo.InvariantCulture),
-                    frame.Left.ToString(CultureInfo.InvariantCulture),
-                    frame.Top.ToString(CultureInfo.InvariantCulture),
-                    frame.Framestamp.ToString(CultureInfo.InvariantCulture),
-                    frame.ComputerTimestamp.ToString(CultureInfo.InvariantCulture),
-                    frame.CameraTimestamp.ToString(CultureInfo.InvariantCulture)
-                };
+            {
+                frame.Width.ToString(CultureInfo.InvariantCulture),
+                frame.Height.ToString(CultureInfo.InvariantCulture),
+                frame.Left.ToString(CultureInfo.InvariantCulture),
+                frame.Top.ToString(CultureInfo.InvariantCulture),
+                frame.Framestamp.ToString(CultureInfo.InvariantCulture),
+                frame.ComputerTimestamp.ToString(CultureInfo.InvariantCulture),
+                frame.CameraTimestamp.ToString(CultureInfo.InvariantCulture)
+            };
                 double[] activity = null;
                 if (frame.PixelType == DCAM_PIXELTYPE.MONO8)
                     activity = ProcessMono8(frame);
@@ -193,9 +194,9 @@ namespace HamamatsuCamera
                     activity = ProcessMono16(frame);
                 else
                     return;
-                if(activity != null)
+                if (activity != null)
                 {
-                    for(int i = 0; i < activity.Length; i++)
+                    for (int i = 0; i < activity.Length; i++)
                     {
                         values.Add(activity[i].ToString(CultureInfo.InvariantCulture));
                     }
@@ -322,3 +323,4 @@ namespace HamamatsuCamera
         }
     }
 }
+

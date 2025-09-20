@@ -1,5 +1,5 @@
 ﻿
-namespace HamamatsuCamera.Visualizers
+namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
 {
     partial class ImageVisualizer
     {

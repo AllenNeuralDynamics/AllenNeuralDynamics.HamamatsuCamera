@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Title>AllenNeuralDynamics.HamamatsuCamera</Title>
     <Description>A bonsai package to interface with Hamamatsu cameras.</Description>
-	<Copyright>Copyright © 2024 Allen Institute for Neural Dynamics</Copyright>
+	<Copyright>Copyright © 2025 Allen Institute for Neural Dynamics</Copyright>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageIcon>icon.png</PackageIcon>
@@ -62,6 +62,7 @@
 
   <ItemGroup>
     <Content Include="..\..\LICENSE" PackagePath="/" />
+    <Content Include="..\..\README.md" PackagePath="/" />
     <Content Include="..\icon.png" PackagePath="/" />
   </ItemGroup>
 

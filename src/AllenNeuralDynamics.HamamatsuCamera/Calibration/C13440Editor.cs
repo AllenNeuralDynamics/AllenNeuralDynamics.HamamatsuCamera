@@ -4,7 +4,7 @@ using System;
 using System.ComponentModel;
 using System.Windows.Forms;
 
-namespace HamamatsuCamera.Calibration
+namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
     /// <summary>
     /// Used to open the <see cref="CalibrationForm"/> from the 

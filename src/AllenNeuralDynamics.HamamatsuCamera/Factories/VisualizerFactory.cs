@@ -1,4 +1,4 @@
-﻿using HamamatsuCamera.API;
+﻿using AllenNeuralDynamics.HamamatsuCamera.API;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ZedGraph;
 
-namespace HamamatsuCamera.Factories
+namespace AllenNeuralDynamics.HamamatsuCamera.Factories
 {
     public class VisualizerFactory : IDisposable
     {

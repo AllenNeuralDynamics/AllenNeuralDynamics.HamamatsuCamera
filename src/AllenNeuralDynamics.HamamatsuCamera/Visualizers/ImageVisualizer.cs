@@ -1,4 +1,4 @@
-﻿using HamamatsuCamera.API;
+﻿using AllenNeuralDynamics.HamamatsuCamera.API;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace HamamatsuCamera.Visualizers
+namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
 {
     public partial class ImageVisualizer : UserControl
     {
