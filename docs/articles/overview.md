@@ -2,4 +2,5 @@
 uid: overview
 ---
 
-Documentation goes here.
+A bonsai package to interface with Hamamatsu cameras.
+

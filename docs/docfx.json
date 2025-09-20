@@ -37,7 +37,9 @@
         "files": [
           "images/**",
           "workflows/**/*.{bonsai,svg}",
-          "{articles,tutorials,examples}/**/*.{bonsai,svg}"
+          "{articles,tutorials,examples}/**/*.{bonsai,svg}",
+          "logo.svg",
+          "favicon.ico"
         ]
       },
       {
@@ -56,7 +58,7 @@
       "template"
     ],
     "sitemap": {
-      "baseUrl": "todo"
+      "baseUrl": "https://allenneuraldynamics.github.io/AllenNeuralDynamics.HamamatsuCamera/"
     },
     "globalMetadata": {
       "_appName": "AllenNeuralInstitute.HamamatsuCamera",

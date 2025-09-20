@@ -4,7 +4,7 @@ export default {
     defaultTheme: 'light',
     iconLinks: [{
         icon: 'github',
-        href: 'https://TODO',
+        href: 'https://github.com/AllenNeuralDynamics/AllenNeuralDynamics.HamamatsuCamera',
         title: 'GitHub'
     }],
     start: () => {
