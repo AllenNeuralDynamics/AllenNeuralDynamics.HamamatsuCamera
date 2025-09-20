@@ -6,7 +6,6 @@
 	<Copyright>Copyright © 2025 Allen Institute for Neural Dynamics</Copyright>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageIcon>icon.png</PackageIcon>
 	<IncludeSymbols>true</IncludeSymbols>
     <RepositoryType>git</RepositoryType>
     <GeneratePackageOnBuild Condition="'$(Configuration)'=='Release'">true</GeneratePackageOnBuild>
@@ -63,7 +62,6 @@
   <ItemGroup>
     <Content Include="..\..\LICENSE" PackagePath="/" />
     <Content Include="..\..\README.md" PackagePath="/" />
-    <Content Include="..\icon.png" PackagePath="/" />
   </ItemGroup>
 
 </Project>
