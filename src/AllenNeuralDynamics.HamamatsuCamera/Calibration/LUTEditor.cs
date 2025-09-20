@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace HamamatsuCamera.Calibration
+namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
     public partial class LUTEditor : UserControl
     {

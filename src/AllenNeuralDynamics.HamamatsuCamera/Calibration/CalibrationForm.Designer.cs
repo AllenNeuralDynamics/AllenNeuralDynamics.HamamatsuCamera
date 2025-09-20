@@ -1,5 +1,5 @@
 ﻿
-namespace HamamatsuCamera.Calibration
+namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
     partial class CalibrationForm
     {
@@ -35,8 +35,8 @@ namespace HamamatsuCamera.Calibration
             this.Load_Button = new System.Windows.Forms.Button();
             this.Save_Button = new System.Windows.Forms.Button();
             this.Settings_Panel = new System.Windows.Forms.Panel();
-            this.Image_Visualizer = new HamamatsuCamera.Visualizers.ImageVisualizer();
-            this.LUTControl = new HamamatsuCamera.Calibration.LUTEditor();
+            this.Image_Visualizer = new AllenNeuralDynamics.HamamatsuCamera.Visualizers.ImageVisualizer();
+            this.LUTControl = new AllenNeuralDynamics.HamamatsuCamera.Calibration.LUTEditor();
             this.Top_TableLayoutPanel.SuspendLayout();
             this.Settings_GroupBox.SuspendLayout();
             this.Props_TableLayoutPanel.SuspendLayout();

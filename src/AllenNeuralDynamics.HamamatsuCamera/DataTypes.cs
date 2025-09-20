@@ -1,7 +1,7 @@
 ﻿
 using Bonsai;
 using Bonsai.IO;
-using HamamatsuCamera.API;
+using AllenNeuralDynamics.HamamatsuCamera.API;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,7 +12,7 @@ using ZedGraph;
 
 using OpenCV.Net;
 
-namespace HamamatsuCamera
+namespace AllenNeuralDynamics.HamamatsuCamera
 {
     public class Frame
     {

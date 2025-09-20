@@ -1,4 +1,4 @@
-// dcamapi4.cs: Jun 18, 2021
+﻿// dcamapi4.cs: Jun 18, 2021
 
 using System;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
 
-namespace HamamatsuCamera.API
+namespace AllenNeuralDynamics.HamamatsuCamera.API
 {
     // error code in DCAM-API
     public struct DCAMERR : IEquatable<DCAMERR>

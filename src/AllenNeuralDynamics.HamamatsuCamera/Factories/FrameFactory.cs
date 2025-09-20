@@ -1,7 +1,6 @@
 ﻿using Bonsai.IO;
 
-using HamamatsuCamera.API;
-
+using AllenNeuralDynamics.HamamatsuCamera.API;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,7 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace HamamatsuCamera.Factories
+namespace AllenNeuralDynamics.HamamatsuCamera.Factories
 {
     /// <summary>
     /// Asynchronously generates a sequence of <see cref="Frame"/> from the Hamamatsu C13440 camera.

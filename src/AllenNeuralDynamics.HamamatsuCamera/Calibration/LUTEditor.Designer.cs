@@ -1,5 +1,5 @@
 ﻿
-namespace HamamatsuCamera.Calibration
+namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
     partial class LUTEditor
     {

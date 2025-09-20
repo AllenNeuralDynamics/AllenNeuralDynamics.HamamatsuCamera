@@ -1,15 +1,15 @@
 ﻿using Bonsai;
 using Bonsai.Design;
-using HamamatsuCamera;
-using HamamatsuCamera.Factories;
-using HamamatsuCamera.Visualizers;
+using AllenNeuralDynamics.HamamatsuCamera;
+using AllenNeuralDynamics.HamamatsuCamera.Factories;
+using AllenNeuralDynamics.HamamatsuCamera.Visualizers;
 using System;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Windows.Forms;
 
 [assembly: TypeVisualizer(typeof(ProcessingVisualizer), Target = typeof(C13440))]
-namespace HamamatsuCamera.Visualizers
+namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
 {
     /// <summary>
     /// Allows <see cref="Bonsai"/> to recognize that the <see cref="ImageProcessing"/>

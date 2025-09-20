@@ -1,8 +1,8 @@
 ﻿using Bonsai;
 using Bonsai.IO;
-using HamamatsuCamera.API;
-using HamamatsuCamera.Factories;
-using HamamatsuCamera.Reflection;
+using AllenNeuralDynamics.HamamatsuCamera.API;
+using AllenNeuralDynamics.HamamatsuCamera.Factories;
+using AllenNeuralDynamics.HamamatsuCamera.Reflection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,7 +12,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Xml.Serialization;
 
-namespace HamamatsuCamera
+namespace AllenNeuralDynamics.HamamatsuCamera
 {
     /// <summary>
     /// Connects with the C13440 Hamamatsu Camera and generates an observable sequence of
@@ -23,7 +23,7 @@ namespace HamamatsuCamera
     /// within the <see cref="ImageProcessing"/> node to confine analysis to the pre-defined regions.
     /// </summary>
     [Description("Generates a sequence of images from Hamamatsu Cameras.")]
-    [Editor("HamamatsuCamera.Calibration.C13440Editor, HamamatsuCamera", typeof(ComponentEditor))]
+    [Editor("AllenNeuralDynamics.HamamatsuCamera.Calibration.C13440Editor, HamamatsuCamera", typeof(ComponentEditor))]
     public class C13440 : Source<Frame>
     {
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HamamatsuCamera
+namespace AllenNeuralDynamics.HamamatsuCamera
 {
     public static class StaticData
     {
