@@ -3,17 +3,16 @@
   <PropertyGroup>
     <Title>AllenNeuralDynamics.HamamatsuCamera</Title>
     <Description>A bonsai package to interface with Hamamatsu cameras.</Description>
-	<Copyright>Copyright © 2025 Allen Institute for Neural Dynamics</Copyright>
+    <Copyright>Copyright © 2025 Allen Institute for Neural Dynamics</Copyright>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-	<IncludeSymbols>true</IncludeSymbols>
+    <IncludeSymbols>true</IncludeSymbols>
     <RepositoryType>git</RepositoryType>
     <GeneratePackageOnBuild Condition="'$(Configuration)'=='Release'">true</GeneratePackageOnBuild>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>Bonsai Rx Hamamatsu AllenNeuralDynamics</PackageTags>
     <TargetFramework>net472</TargetFramework>
     <Features>strict</Features>
-    <Version>0.1.0</Version>
     <PackageType>Dependency;BonsaiLibrary</PackageType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -24,10 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
-	<PackageReference Include="Bonsai.Core" Version="2.8.0" />  
-	<PackageReference Include="Bonsai.Design" Version="2.8.0" />
-	<PackageReference Include="Bonsai.System" Version="2.8.0" />
-	<PackageReference Include="Bonsai.Vision" Version="2.8.0" />
+    <PackageReference Include="Bonsai.Core" Version="2.8.0" />
+    <PackageReference Include="Bonsai.Design" Version="2.8.0" />
+    <PackageReference Include="Bonsai.System" Version="2.8.0" />
+    <PackageReference Include="Bonsai.Vision" Version="2.8.0" />
     <PackageReference Include="ZedGraph" Version="5.1.7" />
   </ItemGroup>
 
