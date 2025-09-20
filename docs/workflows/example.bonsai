@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WorkflowBuilder Version="2.9.0"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xmlns:p1="clr-namespace:AllenNeuralDynamics.HamamatsuCamera;assembly=AllenNeuralDynamics.HamamatsuCamera"
+                 xmlns="https://bonsai-rx.org/2018/workflow">
+  <Workflow>
+    <Nodes>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="p1:C13440">
+          <p1:Acquiring>true</p1:Acquiring>
+          <p1:TiffProperties>
+            <p1:FileNumber>0</p1:FileNumber>
+            <p1:FramesInFile>0</p1:FramesInFile>
+            <p1:NextIFDOffset>16</p1:NextIFDOffset>
+            <p1:StripOffset>16</p1:StripOffset>
+            <p1:Width>0</p1:Width>
+            <p1:Height>0</p1:Height>
+            <p1:BytesPerPixel>2</p1:BytesPerPixel>
+            <p1:BytesPerImage>0</p1:BytesPerImage>
+            <p1:NextIFDOffsetBytes>AAAAAAAAAAA=</p1:NextIFDOffsetBytes>
+            <p1:EndOfDir>AAAAAAAAAAA=</p1:EndOfDir>
+            <p1:Header>SUkrAAgAAAAAAAAAAAAAAA==</p1:Header>
+            <p1:IFD>DwAAAAAAAAAAAQMAAQAAAAAAAAAAAAAAAAAAAAEBAwABAAAAAAAAAAAAAAAAAAAAAgEDAAEAAAAAAAAAEAAAAAAAAAADAQMAAQAAAAAAAAABAAAAAAAAAAYBAwABAAAAAAAAAAEAAAAAAAAAEQEQAAEAAAAAAAAAEAAAAAAAAAASAQMAAQAAAAAAAAABAAAAAAAAABUBAwABAAAAAAAAAAEAAAAAAAAAFgEDAAEAAAAAAAAAAAAAAAAAAAAXAQQAAQAAAAAAAAAAAAAAAAAAABgBAwABAAAAAAAAAAAAAAAAAAAAGQEDAAEAAAAAAAAA//8AAAAAAAAcAQMAAQAAAAAAAAABAAAAAAAAACkBAwACAAAAAAAAAAAA//8AAAAAUwEDAAEAAAAAAAAAAQAAAAAAAAA=</p1:IFD>
+            <p1:IncludeTIFF>true</p1:IncludeTIFF>
+            <p1:Suffix>Timestamp</p1:Suffix>
+            <p1:FramesPerTiff>1000</p1:FramesPerTiff>
+          </p1:TiffProperties>
+          <p1:ImageProcessingProperties>
+            <p1:IncludeProcessing>true</p1:IncludeProcessing>
+            <p1:DeinterleaveCount>1</p1:DeinterleaveCount>
+            <p1:Suffix>None</p1:Suffix>
+            <p1:Overwrite>false</p1:Overwrite>
+          </p1:ImageProcessingProperties>
+          <p1:CropMode>Auto</p1:CropMode>
+        </Combinator>
+      </Expression>
+    </Nodes>
+    <Edges />
+  </Workflow>
+</WorkflowBuilder>
