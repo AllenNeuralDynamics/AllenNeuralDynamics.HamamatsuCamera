@@ -292,7 +292,7 @@ jobs:
     name: Publish documentation
     runs-on: ubuntu-latest
     # Publishing is not strictly necessary here, but if we're going to do a public release we want to wait to publish the docs until it goes out
-    needs: [build-documentation, workflow-images, publish-packages-nuget-org]
+    needs: [build-documentation, workflow-images]
     permissions:
       # Both required by actions/deploy-pages
       pages: write
