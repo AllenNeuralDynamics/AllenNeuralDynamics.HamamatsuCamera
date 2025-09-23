@@ -23,7 +23,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
     /// within the <see cref="ImageProcessing"/> node to confine analysis to the pre-defined regions.
     /// </summary>
     [Description("Generates a sequence of images from Hamamatsu Cameras.")]
-    [Editor("AllenNeuralDynamics.HamamatsuCamera.Calibration.C13440Editor, HamamatsuCamera", typeof(ComponentEditor))]
+    [Editor("AllenNeuralDynamics.HamamatsuCamera.Calibration.C13440Editor, AllenNeuralDynamics.HamamatsuCamera", typeof(ComponentEditor))]
     public class C13440 : Source<Frame>
     {
 
