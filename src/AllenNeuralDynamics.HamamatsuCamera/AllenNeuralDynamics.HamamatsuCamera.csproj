@@ -58,9 +58,4 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\..\LICENSE" PackagePath="/" />
-    <Content Include="..\..\README.md" PackagePath="/" />
-  </ItemGroup>
-
 </Project>
