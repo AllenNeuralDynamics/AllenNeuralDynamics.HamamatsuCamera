@@ -169,7 +169,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
             {
                 try
                 {
-                    frame.iplImage = DcamInterop.ConvertToIplImage(frame.bufframe);
+                    frame.Image = DcamInterop.ConvertToIplImage(frame.bufframe);
                 }
                 catch (Exception ex)
                 {

@@ -16,7 +16,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
 {
     public class Frame
     {
-        public IplImage iplImage;
+        public IplImage Image;
         public DCAMBUF_FRAME bufframe;
         public Frame()
         {
@@ -210,7 +210,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         public ushort FramesPerTiff { get; set; } = 1000;
 
         /// <summary>
-        /// Gets or Sets the optional base filename of the output .tifs. If not specified, the base 
+        /// Gets or Sets the optional base filename of the output .tifs. If not specified, the base
         /// filename will match the containing folder's base name.
         /// </summary>
         [Description("Optional: Specifies the base filename of the output .tif files. If not specified, the base filename will match the containing folder's base name.")]
@@ -302,7 +302,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         }
 
         /// <summary>
-        /// Converts the next IFD offset to a 8-byte array, updating the 
+        /// Converts the next IFD offset to a 8-byte array, updating the
         /// <see cref="NextIFDOffset"/>.
         /// </summary>
         /// <param name="nextIFDOffset">Next IFD Offset to be convert to byte array</param>
@@ -523,5 +523,5 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         public double Value;
     }
 
- 
+
 }
