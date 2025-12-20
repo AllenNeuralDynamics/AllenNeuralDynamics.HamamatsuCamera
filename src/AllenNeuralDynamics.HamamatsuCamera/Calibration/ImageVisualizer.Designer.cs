@@ -1,5 +1,5 @@
 ﻿
-namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
+namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
     partial class ImageVisualizer
     {
@@ -18,16 +18,6 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
             {
                 components.Dispose();
             }
-            if (disposing && MaskImg != null)
-            {
-                MaskImg.Dispose();
-                MaskImg = null;
-            }
-            if (disposing && NextInsideMask != null)
-            {
-                NextInsideMask.Dispose();
-                NextInsideMask = null;
-            }
             base.Dispose(disposing);
         }
 
@@ -45,10 +35,9 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
             this.CountVal_Label = new System.Windows.Forms.Label();
             this.FPS_Label = new System.Windows.Forms.Label();
             this.FPSVal_Label = new System.Windows.Forms.Label();
-            this.Image_PictureBox = new System.Windows.Forms.PictureBox();
+            this.ImageRendererControl = new AllenNeuralDynamics.HamamatsuCamera.Calibration.ImageRendererControl();
             this.Top_TableLayoutPanel.SuspendLayout();
             this.FrameData_TableLayoutPanel.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.Image_PictureBox)).BeginInit();
             this.SuspendLayout();
             // 
             // Top_TableLayoutPanel
@@ -56,7 +45,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
             this.Top_TableLayoutPanel.ColumnCount = 1;
             this.Top_TableLayoutPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.Top_TableLayoutPanel.Controls.Add(this.FrameData_TableLayoutPanel, 0, 1);
-            this.Top_TableLayoutPanel.Controls.Add(this.Image_PictureBox, 0, 0);
+            this.Top_TableLayoutPanel.Controls.Add(this.ImageRendererControl, 0, 0);
             this.Top_TableLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.Top_TableLayoutPanel.Location = new System.Drawing.Point(0, 0);
             this.Top_TableLayoutPanel.Name = "Top_TableLayoutPanel";
@@ -133,20 +122,20 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
             this.FPSVal_Label.Text = "NA";
             this.FPSVal_Label.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
-            // Image_PictureBox
+            // ImageRendererControl
             // 
-            this.Image_PictureBox.BackColor = System.Drawing.SystemColors.Control;
-            this.Image_PictureBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.Image_PictureBox.Location = new System.Drawing.Point(3, 3);
-            this.Image_PictureBox.Name = "Image_PictureBox";
-            this.Image_PictureBox.Size = new System.Drawing.Size(465, 365);
-            this.Image_PictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.Image_PictureBox.TabIndex = 1;
-            this.Image_PictureBox.TabStop = false;
-            this.Image_PictureBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.Image_PictureBox_MouseDown);
-            this.Image_PictureBox.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Image_PictureBox_MouseMove);
-            this.Image_PictureBox.MouseUp += new System.Windows.Forms.MouseEventHandler(this.Image_PictureBox_MouseUp);
-            this.Image_PictureBox.PreviewKeyDown += new System.Windows.Forms.PreviewKeyDownEventHandler(this.Image_PictureBox_PreviewKeyDown);
+            this.ImageRendererControl.CropMode = AllenNeuralDynamics.HamamatsuCamera.Models.CropMode.Auto;
+            this.ImageRendererControl.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.ImageRendererControl.Location = new System.Drawing.Point(3, 3);
+            this.ImageRendererControl.Name = "ImageRendererControl";
+            this.ImageRendererControl.NextCrop = new System.Drawing.Rectangle(0, 0, 0, 0);
+            this.ImageRendererControl.SelectedRegion = 0;
+            this.ImageRendererControl.Size = new System.Drawing.Size(465, 365);
+            this.ImageRendererControl.TabIndex = 1;
+            this.ImageRendererControl.KeyDown += new System.Windows.Forms.KeyEventHandler(this.ImageVisualizer_KeyDown);
+            this.ImageRendererControl.MouseDown += new System.Windows.Forms.MouseEventHandler(this.ImageRendererControl_MouseDown);
+            this.ImageRendererControl.MouseMove += new System.Windows.Forms.MouseEventHandler(this.ImageRendererControl_MouseMove);
+            this.ImageRendererControl.MouseUp += new System.Windows.Forms.MouseEventHandler(this.ImageRendererControl_MouseUp);
             // 
             // ImageVisualizer
             // 
@@ -154,10 +143,10 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
             this.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Name = "ImageVisualizer";
             this.Size = new System.Drawing.Size(471, 401);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.ImageVisualizer_KeyDown);
             this.Top_TableLayoutPanel.ResumeLayout(false);
             this.FrameData_TableLayoutPanel.ResumeLayout(false);
             this.FrameData_TableLayoutPanel.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.Image_PictureBox)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -170,6 +159,6 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
         private System.Windows.Forms.Label CountVal_Label;
         private System.Windows.Forms.Label FPS_Label;
         private System.Windows.Forms.Label FPSVal_Label;
-        private System.Windows.Forms.PictureBox Image_PictureBox;
+        private Calibration.ImageRendererControl ImageRendererControl;
     }
 }

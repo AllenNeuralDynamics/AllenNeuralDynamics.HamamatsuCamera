@@ -1,197 +1,139 @@
-﻿using Bonsai.Design;
-using AllenNeuralDynamics.HamamatsuCamera.API;
+﻿using AllenNeuralDynamics.HamamatsuCamera.API;
+using AllenNeuralDynamics.HamamatsuCamera.Exceptions;
+using AllenNeuralDynamics.HamamatsuCamera.Models;
+using Bonsai.Reactive;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
+using Timer = System.Windows.Forms.Timer;
 
 namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
+    /// <summary>
+    /// Form used to configure the <see cref="_instance"/> node and the attached monochromatic Hamamatsu Camera.
+    /// </summary>
     public partial class CalibrationForm : Form
     {
-        #region Constants 
-
-        //private const double SubArr_OFF = 1.0;
-        //private const double SubArr_ON = 2.0;
-        private const int NUM_MISC_PROPS = 1;   // Crop Mode, LUT MIN, aand LUT MAX
-        private const float ROW_SIZE = 30.0f;
-        //private const int LUT_ABS_MIN = 0;
-        //private const int LUT_ABS_MAX = 100;
-        private const int WAIT_TIME = 200;
-        private const int TIMEOUT = 5000;
-
-        /// <summary>
-        /// Common string lookups.
-        ///// </summary>
-        //private static class StaticData.Strings
-        //{
-        //    // Camera Setting StaticData.Strings
-        //    public const string SETTINGS = "SETTINGS";
-        //    public const string SUBARR = "SUBARRAY";
-        //    public const string SUBARR_HPOS = "SUBARRAY HPOS";
-        //    public const string SUBARR_VPOS = "SUBARRAY VPOS";
-        //    public const string SUBARR_HSIZE = "SUBARRAY HSIZE";
-        //    public const string SUBARR_VSIZE = "SUBARRAY VSIZE";
-        //    public const string SUBARR_MODE = "SUBARRAY MODE";
-        //    public const string NUM_PIXELS_HORZ = "IMAGE DETECTOR PIXEL NUM HORZ";
-        //    public const string NUM_PIXELS_VERT = "IMAGE DETECTOR PIXEL NUM VERT";
-        //    public const string BINNING = "BINNING";
-
-        //    // Misc. Setting StaticData.Strings
-        //    public const string CROP_MODE = "Crop Mode";
-        //    public const string AUTO = "Auto";
-        //    public const string MANUAL = "Manual";
-        //    public const string LUT = "LUT";
-        //    public const string LUT_MIN = "LUT Min";
-        //    public const string LUT_MAX = "LUT Max";
-
-        //    // Other StaticData.Strings
-        //    public const string ERROR = "Error:";
-        //}
-
-
-        //public static Dictionary<int, string> GroupNames = new Dictionary<int, string>()
-        //{
-        //    { 0         , "Miscellaneous"           },
-        //    { 1         , "Sensor Mode and Speed"   },
-        //    { 2         , "Trigger"                 },
-        //    { 4         , "Feature"                 },
-        //    { 8         , "Output Trigger"          },
-        //    { 128       , "Sensor Cooler"           },
-        //    { 1024      , "Binning and ROI"         },
-        //    { 2048      , "Sensor Mode and Speed"   },
-        //    { 4096      , "ALU"                     },
-        //    { 8192      , "System Information 1"    },
-        //    { 65536     , "Synchronous Timing"      },
-        //    { 131072    , "System Information 2"    },
-        //    { 262144    , "System Information 3"    },
-        //    { 4194304   , "System Information 4"    },
-        //    { 8388608   , "Master Pulse"            },
-        //    { 33554432  , "Data Reduction"          }
-        //};
-
-        //public static Dictionary<string, int> StaticData.MiscSettingGroups = new Dictionary<string, int>()
-        //{
-        //    { StaticData.Strings.CROP_MODE  , 1024   },
-        //    { StaticData.Strings.LUT_MIN    , 1024   },
-        //    { StaticData.Strings.LUT_MAX    , 1024   },
-        //};
-
-        #endregion
-
         #region Private Members
 
-        private C13440 C13440;
+        // Camera Setting Strings
+        private const string _subarrStr = "SUBARRAY";
+        private const string _subarrHPosStr = "SUBARRAY HPOS";
+        private const string _subarrVPosStr = "SUBARRAY VPOS";
+        private const string _subarrHSizeStr = "SUBARRAY HSIZE";
+        private const string _subarrVSizeStr = "SUBARRAY VSIZE";
+        private const string _subarrModeStr = "SUBARRAY MODE";
+        private const string _numPixelsHorzStr = "IMAGE DETECTOR PIXEL NUM HORZ";
+        private const string _numPixelsVertStr = "IMAGE DETECTOR PIXEL NUM VERT";
+        private const string _binningStr = "BINNING";
+        private const string _temperatureStr = "SENSOR TEMPERATURE";
+        // Misc. Setting Strings
+        private const string _cropModeStr = "Crop Mode";
+        private const string _autoStr = "Auto";
+        private const string _manualStr = "Manual";
+        private readonly Dictionary<int, string> _groupNames = new Dictionary<int, string>()
+        {
+            { 0         , "Miscellaneous"           },
+            { 1         , "Sensor Mode and Speed"   },
+            { 2         , "Trigger"                 },
+            { 4         , "Feature"                 },
+            { 8         , "Output Trigger"          },
+            { 128       , "Sensor Cooler"           },
+            { 1024      , "Binning and ROI"         },
+            { 2048      , "Sensor Mode and Speed"   },
+            { 4096      , "ALU"                     },
+            { 8192      , "System Information 1"    },
+            { 65536     , "Synchronous Timing"      },
+            { 131072    , "System Information 2"    },
+            { 262144    , "System Information 3"    },
+            { 4194304   , "System Information 4"    },
+            { 8388608   , "Master Pulse"            },
+            { 33554432  , "Data Reduction"          }
+        };
+        private readonly Dictionary<string, int> _miscSettingGroups = new Dictionary<string, int>()
+        {
+            { _cropModeStr  , 1024   }
+        };
+
+        private const float ROW_SIZE = 30.0f;
+        private readonly C13440 _instance;
         private IDisposable Subscription;
         private IEnumerable<DCAM_PROP_MANAGER> CameraProps;
         private IEnumerable<Control> SettingsHierarchy;
-        private CropSettings AutoCrop = new CropSettings();
-        private CropSettings ManualCrop = new CropSettings();
-        private string UpdatingProp;
-        private Dictionary<int, int> LookupTable;
+        private readonly CropSettings AutoCrop = new CropSettings();
+        private readonly CropSettings ManualCrop = new CropSettings();
+        private readonly Timer _temperatureTimer;
+        private readonly bool _failedToLoad;
 
         #endregion
 
         #region Initialization
         /// <summary>
-        /// Constructor for form. Initializes components, pulls camera data,
-        /// loads form, closes splash screen, and begins acquisition.
+        /// Constructs the form, initializes members,
+        /// starts an update timer, and starts the <see cref="C13440"/> subscription.
         /// </summary>
         /// <param name="c13440">Instance of the <see cref="C13440"/> node.</param>
-        /// <param name="provider">Service provider</param>
-        public CalibrationForm(C13440 c13440, IServiceProvider provider)
+        public CalibrationForm(C13440 c13440)
         {
             try
             {
                 InitializeComponent();
-
-                // Pull required data then load form
-                PullCameraData(c13440);
-                LoadForm();
-                Image_Visualizer.Regions = C13440.ImageProcessingProperties.Regions;
-                LUTControl.LoadLUT(C13440.ImageProcessingProperties.PointsOfInterest);
-
-                // Once ready, close the splash
-                SplashScreen.CloseSplash();
-
-                // If data was not loaded successfully, close the form
-                if (CameraProps == null)
+                _instance = c13440;
+                var success = TryInitAndOpen();
+                if (!success)
                 {
-                    MessageBox.Show(Resources.MsgBox_Error_LoadCameraSettings, StaticData.Strings.ERROR, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Close();
+                    _failedToLoad = true;
+                    SplashScreen.CloseSplash();
                     return;
                 }
-                C13440.FrameFactory.Acquiring = true;
+                InitializeMembers();
+                _temperatureTimer = new Timer()
+                {
+                    Interval = 5000
+                };
+                _temperatureTimer.Tick += TemperatureTimer_Tick;
+                Subscription = _instance.Generate().Do(frame => Image_Visualizer.TryUpdateNewFrame(frame)).Subscribe();
+                SplashScreen.CloseSplash();
+                _temperatureTimer.Start();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CalibrationForm\nMessage: {ex.Message}");
-                this.Close();
+                ConsoleLogger.LogError(ex);
+                Close();
             }
         }
 
         /// <summary>
-        /// Begin the subscription to the camera. Once the camera is ready, it will 
-        /// send a null frame.
+        /// Stores required references and finishes initializing the UI
         /// </summary>
-        /// <param name="c13440"></param>
-        private void PullCameraData(C13440 c13440)
+        private void InitializeMembers()
         {
-            try
-            {
-                C13440 = c13440;
-                Image_Visualizer.RegionsChanged += Image_Visualizer_RegionChanged;
-
-                Subscription = C13440.Generate()
-                    .Do(frame =>
-                    {
-                        if (!frame.isValid() && CameraProps == null && C13440.CameraProps != null)
-                            CameraProps = C13440.CameraProps;
-                    })
-                    .Where(frame => frame.isValid())
-                    .Do(frame => Image_Visualizer.UpdateFrame(frame))
-                    .Subscribe();
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine($"Error: PullCameraData\nMessage: {ex.Message}");
-            }
+            TryInitAndOpen();
+            CameraProps = _instance.CameraProps;
+            Settings_Panel.Controls.Add(CreateSettingsTable());
+            if (_instance.Regions != null)
+                Image_Visualizer.Regions = _instance.Regions;
+            Image_Visualizer.RegionsChanged += Image_Visualizer_RegionsChanged;
+            LUTControl.LoadLUT(_instance.PointsOfInterest);
         }
 
-        /// <summary>
-        /// Wait for the camera properties to be loaded. Then, create the settings table.
-        /// </summary>
-        private void LoadForm()
+        private bool TryInitAndOpen()
         {
+
             try
             {
-                // Wait for data loaded
-                var totalWaitTime = 0;
-                while (CameraProps == null)
-                {
-                    Thread.Sleep(WAIT_TIME);
-                    totalWaitTime += WAIT_TIME;
-                    if (totalWaitTime >= TIMEOUT)
-                        return;
-                }
-
-                // If data loaded successfully, then create a table to display the data
-                if (CameraProps.Any())
-                    Settings_Panel.Controls.Add(CreateSettingsTable());
+                _instance.Capture.InitAndOpen();
             }
-            catch(Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Error: LoadForm\nMessage: {ex.Message}");
+                return false;
             }
+            return true;
         }
 
         #endregion
@@ -200,7 +142,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         /// <summary>
         /// Instantiate and configure the settings table. Then,
-        /// add groups to the table. Finally get the control heirarchy.
+        /// add groups to the table. Finally get the control hierarchy.
         /// </summary>
         /// <returns>Settings table.</returns>
         private TableLayoutPanel CreateSettingsTable()
@@ -234,12 +176,20 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CreateGroupSetting\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return new TableLayoutPanel();
         }
 
-        private void SetDimensions(ref TableLayoutPanel table, int numCols, int numRows, SizeType sizeType)
+        /// <summary>
+        /// Configures a <see cref="TableLayoutPanel"/> to have the required
+        /// columns, rows, and size type.
+        /// </summary>
+        /// <param name="table"><see cref="TableLayoutPanel"/> to be configured.</param>
+        /// <param name="numCols">Number of columns to add to the table.</param>
+        /// <param name="numRows">Number of rows to add to the table</param>
+        /// <param name="sizeType">Size type of the rows.</param>
+        private static void SetDimensions(ref TableLayoutPanel table, int numCols, int numRows, SizeType sizeType)
         {
             try
             {
@@ -263,10 +213,16 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: SetDimensions\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Create a <see cref="TableLayoutPanel"/> for containing the controls
+        /// for a group of camera settings.
+        /// </summary>
+        /// <param name="group">Group ID</param>
+        /// <returns><see cref="TableLayoutPanel"/> for a group of camera settings.</returns>
         private TableLayoutPanel CreateGroup(int group)
         {
             try
@@ -275,7 +231,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 var groupSettings = CameraProps.Where(prop => prop.m_attr.iGroup == group);
                 var numRows = 1 + groupSettings.Count();
 
-                var miscSettings = StaticData.MiscSettingGroups.Where(pair => pair.Value == group);
+                var miscSettings = _miscSettingGroups.Where(pair => pair.Value == group);
                 if (miscSettings.Any())
                     numRows += miscSettings.Count();
 
@@ -300,57 +256,65 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CreateGroup\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return new TableLayoutPanel();
         }
 
+        /// <summary>
+        /// Creates and configures a <see cref="NameValuePair"/> to allow for user control
+        /// of the specified camera setting.
+        /// </summary>
+        /// <param name="groupSetting">Specified camera setting.</param>
+        /// <returns><see cref="NameValuePair"/> allowing user control of camera setting.</returns>
         private NameValuePair CreateGroupSetting(DCAM_PROP_MANAGER groupSetting)
         {
             try
             {
-                NameValuePair nameValuePair = new NameValuePair(groupSetting);
-                nameValuePair.Padding = new Padding(40, 0, 0, 0);
-                nameValuePair.Dock = DockStyle.Fill;
-                nameValuePair.ReleaseBuffer += Setting_ReleaseBuffer;
-                nameValuePair.StartAcquisition += Setting_StartAcquisition;
-                nameValuePair.RefreshProps += Setting_RefreshProps;
-
-                UpdateRelatedSoftwareSettings(ref nameValuePair);
-
-
+                var nameValuePair = new NameValuePair(groupSetting)
+                {
+                    Padding = new Padding(40, 0, 0, 0),
+                    Dock = DockStyle.Fill
+                };
+                nameValuePair.DataStreamPropChangeRequest += HandleDataStreamPropChangeRequest;
+                nameValuePair.EffectiveChangeOccurred += NameValuePair_EffectiveChangeOccured;
+                switch (nameValuePair.SettingName)
+                {
+                    case _subarrHPosStr:
+                    case _subarrHSizeStr:
+                    case _subarrVPosStr:
+                    case _subarrVSizeStr:
+                    case _subarrModeStr:
+                        if (_instance.CropMode == CropMode.Auto) nameValuePair.Disable(DCAMCAP_STATUS.BUSY);
+                        break;
+                    case _numPixelsHorzStr:
+                        ManualCrop.HSize = nameValuePair.SettingValue;
+                        Image_Visualizer.NumPixelsHorizontal = (int)nameValuePair.SettingValue;
+                        break;
+                    case _numPixelsVertStr:
+                        ManualCrop.VSize = nameValuePair.SettingValue;
+                        Image_Visualizer.NumPixelsVertical = (int)nameValuePair.SettingValue;
+                        break;
+                    case _binningStr:
+                        Image_Visualizer.Binning = (int)nameValuePair.SettingValue;
+                        break;
+                }
                 return nameValuePair;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CreateGroupSetting\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return new NameValuePair();
         }
 
-        private void UpdateRelatedSoftwareSettings(ref NameValuePair nameValuePair)
-        {
-            switch (nameValuePair.SettingName)
-            {
-                case StaticData.Strings.SUBARR_HPOS:
-                case StaticData.Strings.SUBARR_HSIZE:
-                case StaticData.Strings.SUBARR_VPOS:
-                case StaticData.Strings.SUBARR_VSIZE:
-                case StaticData.Strings.SUBARR_MODE:
-                    if (C13440.CropMode == CropMode.Auto) nameValuePair.Disable();
-                    break;
-                case StaticData.Strings.NUM_PIXELS_HORZ:
-                    Image_Visualizer.NumPixelsHorz = (int)nameValuePair.SettingValue;
-                    break;
-                case StaticData.Strings.NUM_PIXELS_VERT:
-                    Image_Visualizer.NumPixelsVert = (int)nameValuePair.SettingValue;
-                    break;
-                case StaticData.Strings.BINNING:
-                    Image_Visualizer.Binning = (int)nameValuePair.SettingValue;
-                    break;
-            }
-        }
-
+        /// <summary>
+        /// Creates <see cref="TableLayoutPanel"/> for providing user control
+        /// of non-camera specific settings. Currently, this is only used for
+        /// <see cref="CropMode"/> but can be expanded by adding to <see cref="_miscSettingGroups"/>.
+        /// </summary>
+        /// <param name="key">Misc setting ID.</param>
+        /// <returns><see cref="TableLayoutPanel"/> for Misc setting.</returns>
         private TableLayoutPanel CreateMiscSetting(string key)
         {
             try
@@ -361,52 +325,63 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 miscSettingTable.Dock = DockStyle.Fill;
 
                 // Create Name Label
-                var nameLabel = new Label();
-                nameLabel.Text = key;
-                nameLabel.Dock = DockStyle.Fill;
-                nameLabel.Margin = new Padding(3);
-                nameLabel.Padding = new Padding(0);
-                nameLabel.TextAlign = ContentAlignment.MiddleLeft;
+                var nameLabel = new Label
+                {
+                    Text = key,
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(3),
+                    Padding = new Padding(0),
+                    TextAlign = ContentAlignment.MiddleLeft
+                };
                 nameLabel.Click += UnClickLabel;
 
 
                 miscSettingTable.Controls.Add(nameLabel, 0, 0);
                 // Create Value Control
-                if (key == StaticData.Strings.CROP_MODE)
+                if (key == _cropModeStr)
                 {
-                    var cropValue = new ComboBox();
-                    cropValue.Tag = StaticData.Strings.CROP_MODE;
-                    cropValue.DropDownStyle = ComboBoxStyle.DropDownList;
-                    cropValue.Dock = DockStyle.Fill;
-                    cropValue.Font = new Font(Settings_Panel.Font, FontStyle.Regular);
-                    cropValue.Margin = new Padding(3);
-                    cropValue.Items.Add(StaticData.Strings.AUTO);
-                    cropValue.Items.Add(StaticData.Strings.MANUAL);
-                    cropValue.SelectedIndex = C13440.CropMode == CropMode.Auto ? 0 : 1;
-                    Image_Visualizer.CropMode = C13440.CropMode;
-                    cropValue.SelectionChangeCommitted += Setting_ReleaseBuffer;
+                    var cropValue = new ComboBox
+                    {
+                        Tag = _cropModeStr,
+                        DropDownStyle = ComboBoxStyle.DropDownList,
+                        Dock = DockStyle.Fill,
+                        Font = new Font(Settings_Panel.Font, FontStyle.Regular),
+                        Margin = new Padding(3)
+                    };
+                    cropValue.Items.Add(_autoStr);
+                    cropValue.Items.Add(_manualStr);
+                    cropValue.SelectedIndex = _instance.CropMode == CropMode.Auto ? 0 : 1;
+                    Image_Visualizer.CropMode = _instance.CropMode;
+                    cropValue.SelectionChangeCommitted += HandleCropModeChanged;
                     miscSettingTable.Controls.Add(cropValue, 1, 0);
                 }
                 return miscSettingTable;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CreateMiscSetting\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return new TableLayoutPanel();
         }
 
+        /// <summary>
+        /// Creates a <see cref="Label"/> for a camera setting group.
+        /// </summary>
+        /// <param name="group">Group ID.</param>
+        /// <returns><see cref="Label"/> for a camera setting group.</returns>
         private Label CreateGroupLabel(int group)
         {
             try
             {
-                var groupLabel = new Label();
-                groupLabel.Name = StaticData.GroupNames[group];
-                groupLabel.Text = StaticData.GroupNames[group];
-                groupLabel.Font = new Font(Font.FontFamily, Font.Size, FontStyle.Bold);
-                groupLabel.Dock = DockStyle.Fill;
-                groupLabel.Margin = new Padding(0);
-                groupLabel.TextAlign = ContentAlignment.MiddleLeft;
+                var groupLabel = new Label
+                {
+                    Name = _groupNames[group],
+                    Text = _groupNames[group],
+                    Font = new Font(Font.FontFamily, Font.Size, FontStyle.Bold),
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(0),
+                    TextAlign = ContentAlignment.MiddleLeft
+                };
                 groupLabel.Click += UnClickLabel;
                 groupLabel.BackColor = Color.SandyBrown;
                 groupLabel.Tag = group;
@@ -415,7 +390,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CreateGroupLabel\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return new Label();
         }
@@ -423,11 +398,11 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         /// <summary>
         /// Recursively, finds the hierarchy of controls belonging to a root <see cref="Control"/>.
-        /// Creates a <see cref="Queue{Control}"/> starting with the root <see cref="Control"/>.
+        /// Creates a <see cref="Queue{T}"/> of <see cref="Control"/>, starting with the root <see cref="Control"/>.
         /// While the queue is not empty, remove the next control of the queue, yield returning it.
         /// Then add of that control's children to the queue.
         /// </summary>
-        /// <param name="root"><see cref="Control"/> that is the Active Control of the <see cref="Settings_PropGrid"/>.</param>
+        /// <param name="root"><see cref="Control"/> that is the Active Control of the <see cref="PropertyGrid"/>.</param>
         /// <returns></returns>
         private IEnumerable<Control> GetControlHierarchy(Control root)
         {
@@ -457,218 +432,174 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Settings Table Events
 
-        private void Setting_RefreshProps(object sender, EventArgs e)
-        {
-            //if (sender is NameValuePair)
-            //{
-            //    var changedValueControl = (NameValuePair)sender;
-            //    var nameValuePairs = Settings_TableLayoutPanel.Controls.OfType<NameValuePair>();
-            //    if (nameValuePairs.Any())
-            //    {
-            //        nameValuePairs = nameValuePairs.Where(pair => pair.SettingName != changedValueControl.SettingName);
-            //        foreach (var nameValuePair in nameValuePairs)
-            //            nameValuePair.RefreshValue();
-            //    }
-
-            //}
-        }
-
-        private void Setting_StartAcquisition(object sender, EventArgs e)
+        /// <summary>
+        /// Handles <see cref="_temperatureTimer"/> ticks for updating the
+        /// current camera temperature in the UI.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void TemperatureTimer_Tick(object sender, EventArgs e)
         {
             try
             {
-                if (sender is NameValuePair)
-                    C13440.FrameFactory.AcquisitionStarted += FrameFactory_AcquisitionStarted;
-                
-
-                C13440.FrameFactory.Acquiring = true;
+                var temperatureProp = SettingsHierarchy.OfType<NameValuePair>().First(prop => prop.SettingName == _temperatureStr);
+                temperatureProp.RefreshValue();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: NameValuePair_StartAcquisition\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
-        private void FrameFactory_AcquisitionStarted(object sender, EventArgs e)
+        /// <summary>
+        /// Handles changes to camera settings that affect the data stream.
+        /// These require the camera to be in <see cref="DCAMCAP_STATUS.STABLE"/>,
+        /// so the capture is paused and buffer is released, then the setting is changed,
+        /// and finally the buffer is reallocated and capture is resumed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void HandleDataStreamPropChangeRequest(object sender, EventArgs e)
         {
             try
             {
-                var nameValuePairs = SettingsHierarchy.OfType<NameValuePair>().Where(pair => pair.SettingName != UpdatingProp);
-                foreach (var nameValuePair in nameValuePairs)
+                if(sender is NameValuePair nameValuePair)
                 {
-                    Action safeRefreshValue = delegate { nameValuePair.RefreshValue(); };
-                    nameValuePair.Invoke(safeRefreshValue);
-                }
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine($"Error: FrameFactory_AcquisitionStarted\nMessage{ex.Message}");
-            }
-            finally
-            {
-                C13440.FrameFactory.AcquisitionStarted -= FrameFactory_AcquisitionStarted;
-            }
-        }
-
-        private void Setting_ReleaseBuffer(object sender, EventArgs e)
-        {
-            try
-            {
-                if (sender is NameValuePair)
-                    UpdatingProp = ((NameValuePair)sender).SettingName;
-                else
-                    UpdatingProp = StaticData.Strings.CROP_MODE;
-
-                C13440.FrameFactory.BufferReleased += FrameFactory_BufferReleased;
-                C13440.FrameFactory.Acquiring = false;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: FrameFactory_AcquisitionStarted\nMessage: {ex.Message}");
-            }
-
-        }
-
-        private void FrameFactory_BufferReleased(object sender, EventArgs e)
-        {
-            try
-            {
-
-                if (UpdatingProp == StaticData.Strings.CROP_MODE)
-                {
-                    Action safeUpdateROISettings = delegate { UpdateROISettings(IsAutoCrop()); };
-                    this.Invoke(safeUpdateROISettings);
-                    Action safeStartAcquisition = delegate { Setting_StartAcquisition(null, EventArgs.Empty); };
-                    this.Invoke(safeStartAcquisition);
-                }
-                else if(UpdatingProp == StaticData.Strings.AUTO)
-                {
-                    Action safeUpdateROISettings = delegate { UpdateROISettings(true); };
-                    this.Invoke(safeUpdateROISettings);
-                    Action safeStartAcquisition = delegate { Setting_StartAcquisition(null, EventArgs.Empty); };
-                    this.Invoke(safeStartAcquisition);
-                }
-                else if(UpdatingProp == StaticData.Strings.SETTINGS)
-                {
-                    Action safeLoadSettings = delegate { LoadSettings(); };
-                    this.Invoke(safeLoadSettings);
-                    Action safeStartAcquisition = delegate {
-                        C13440.FrameFactory.AcquisitionStarted += FrameFactory_AcquisitionStarted;
-                        C13440.FrameFactory.Acquiring = true;
-                    };
-                    this.Invoke(safeStartAcquisition);
-                }
-                else if(UpdatingProp == StaticData.Strings.BINNING)
-                {
-                    var nameValuePair = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName == UpdatingProp).First();
-                    Action safeUpdateValue = delegate { nameValuePair.UpdateValue(); };
-                    nameValuePair.Invoke(safeUpdateValue);
-                    Action safeUpdateBinning = delegate { UpdateBinning(); };
-                    this.Invoke(safeUpdateBinning);
-                }
-                else if (UpdatingProp == StaticData.Strings.SUBARR_HPOS)
-                {
-                    var nameValuePair = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName == UpdatingProp).First();
-                    Action safeUpdateValue = delegate { nameValuePair.UpdateValue(); };
-                    nameValuePair.Invoke(safeUpdateValue);
-                    var mode = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Equals(StaticData.Strings.SUBARR_MODE)).First().SettingValue;
-                    var binning = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Equals(StaticData.Strings.BINNING)).First().SettingValue;
-                    if (mode == StaticData.SubArr_ON)
-                        C13440.FrameFactory.Left = (int)(nameValuePair.SettingValue / binning);
-                }
-                else if (UpdatingProp == StaticData.Strings.SUBARR_VPOS)
-                {
-                    var nameValuePair = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName == UpdatingProp).First();
-                    Action safeUpdateValue = delegate { nameValuePair.UpdateValue(); };
-                    nameValuePair.Invoke(safeUpdateValue);
-                    var mode = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Equals(StaticData.Strings.SUBARR_MODE)).First().SettingValue;
-                    var binning = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Equals(StaticData.Strings.BINNING)).First().SettingValue;
-                    if (mode == StaticData.SubArr_ON)
-                        C13440.FrameFactory.Top = (int)(nameValuePair.SettingValue / binning);
-                }
-                else
-                {
-
-                    var nameValuePair = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName == UpdatingProp).First();
-                    Action safeUpdateValue = delegate { nameValuePair.UpdateValue(); };
-                    nameValuePair.Invoke(safeUpdateValue);
-                    if (nameValuePair.SettingName.Equals(StaticData.Strings.SUBARR_MODE))
+                    var status = _instance.Capture.GetStatus();
+                    if (status == DCAMCAP_STATUS.STABLE)
                     {
-                        if(nameValuePair.SettingValue == StaticData.SubArr_ON)
-                        {
-                            var binning = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Equals(StaticData.Strings.BINNING)).First().SettingValue;
-                            C13440.FrameFactory.Left = (int)(SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Equals(StaticData.Strings.SUBARR_HPOS)).First().SettingValue / binning);
-                            C13440.FrameFactory.Top = (int)(SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Equals(StaticData.Strings.SUBARR_VPOS)).First().SettingValue / binning);
-                        }
-                        else
-                        {
-                            C13440.FrameFactory.Left = 0;
-                            C13440.FrameFactory.Top = 0;
-                        }
+                        nameValuePair.UpdateValue();
+                        if (nameValuePair.SettingName == _binningStr)
+                            Image_Visualizer.UpdateBinning((int)nameValuePair.SettingValue);
+                        else if (GetIsSubarray(nameValuePair.Setting.m_idProp))
+                            UpdateSubarray();
+
+                    }
+                    else
+                    {
+                        _instance.Capture.PauseAndRelease();
+                        nameValuePair.UpdateValue();
+                        if (nameValuePair.SettingName == _binningStr)
+                            Image_Visualizer.UpdateBinning((int)nameValuePair.SettingValue);
+                        else if (GetIsSubarray(nameValuePair.Setting.m_idProp))
+                            UpdateSubarray();
+                        Image_Visualizer.ResetFrameCount();
+                        _instance.Capture.ReallocateAndResume();
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Console.WriteLine($"Error: FrameFactory_BufferReleased\nMessage: {ex.Message}");
-            }
-            finally
-            {
-                C13440.FrameFactory.BufferReleased -= FrameFactory_BufferReleased;
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Handles changes to the <see cref="CropMode"/> property. This requires the
+        /// camera to be in <see cref="DCAMCAP_STATUS.STABLE"/>. So the capture is paused
+        /// and buffer is released. Then the setting is changed and finally the buffer is
+        /// reallocated and capture is resumed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void HandleCropModeChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                var status = _instance.Capture.GetStatus();
+                if (status == DCAMCAP_STATUS.STABLE)
+                    UpdateROISettings(IsAutoCrop());
+                else
+                {
+                    _instance.Capture.PauseAndRelease();
+                    UpdateROISettings(IsAutoCrop());
+                    Image_Visualizer.ResetFrameCount();
+                    _instance.Capture.ReallocateAndResume();
+                }
+            }
+            catch (Exception ex)
+            {
+                ConsoleLogger.LogError(ex);
+            }
+        }
 
+        /// <summary>
+        /// Handles changes to camera settings that effect other settings.
+        /// These changes cause other camera settings in the UI to become stale,
+        /// so here they are all refreshed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void NameValuePair_EffectiveChangeOccured(object sender, EventArgs e)
+        {
+            try
+            {
+                var nameValuePairs = SettingsHierarchy.OfType<NameValuePair>().Where(pair => !string.IsNullOrEmpty(pair.SettingName));
+                foreach (var nameValuePair in nameValuePairs)
+                    nameValuePair.RefreshValue();
+            }
+            catch(Exception ex)
+            {
+                ConsoleLogger.LogError(ex);
+            }
+        }
 
         #endregion
 
         #region Helper Functions
 
-        private void UpdateBinning()
+        /// <summary>
+        /// Stores the subarray in the Manual Crop variable and updates the <see cref="ImageVisualizer"/>.
+        /// </summary>
+        private void UpdateSubarray()
         {
-            try
-            {
-                var binCtrl = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Equals(StaticData.Strings.BINNING)).First();
-                var subarrayControls = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Contains(StaticData.Strings.SUBARR));
-                C13440.FrameFactory.Left = (int)(subarrayControls.Where(prop => prop.SettingName.Equals(StaticData.Strings.SUBARR_HPOS)).First().SettingValue / binCtrl.SettingValue);
-                C13440.FrameFactory.Top = (int)(subarrayControls.Where(prop => prop.SettingName.Equals(StaticData.Strings.SUBARR_VPOS)).First().SettingValue / binCtrl.SettingValue);
-                Image_Visualizer.UpdateBinning((int)binCtrl.SettingValue);
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine($"Error: UpdateBinning()\nMessage: {ex.Message}");
-            }
+            var subarrayControls = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Contains(_subarrStr));
+            foreach (var subarrayControl in subarrayControls)
+                subarrayControl.RefreshValue();
+
+            ManualCrop.HPos = subarrayControls.First(ctrl => ctrl.Setting.m_idProp == DCAMIDPROP.SUBARRAYHPOS).SettingValue;
+            ManualCrop.HSize = subarrayControls.First(ctrl => ctrl.Setting.m_idProp == DCAMIDPROP.SUBARRAYHSIZE).SettingValue;
+            ManualCrop.VPos = subarrayControls.First(ctrl => ctrl.Setting.m_idProp == DCAMIDPROP.SUBARRAYVPOS).SettingValue;
+            ManualCrop.VSize = subarrayControls.First(ctrl => ctrl.Setting.m_idProp == DCAMIDPROP.SUBARRAYVSIZE).SettingValue;
+            ManualCrop.Mode = subarrayControls.First(ctrl => ctrl.Setting.m_idProp == DCAMIDPROP.SUBARRAYMODE).SettingValue == DCAMPROP.MODE.ON;
+
+            Image_Visualizer.UpdateSubarray(ManualCrop);
         }
 
+        /// <summary>
+        /// Updates the region of interest properties based on the <see cref="CropMode"/>.
+        /// Turns of the subarray, sets the new crop, updates user access to
+        /// subarray properties based on <see cref="CropMode"/>.
+        /// </summary>
+        /// <param name="auto">Current <see cref="CropMode"/>.</param>
         private void UpdateROISettings(bool auto)
         {
             try
             {
                 Image_Visualizer.CropMode = auto ? CropMode.Auto : CropMode.Manual;
-                C13440.CropMode = Image_Visualizer.CropMode;
-                var subarrayControls = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Contains(StaticData.Strings.SUBARR));
+                _instance.CropMode = Image_Visualizer.CropMode;
+
+                var status = _instance.Capture.GetStatus();
+                var subarrayControls = SettingsHierarchy.OfType<NameValuePair>().Where(prop => prop.SettingName.Contains(_subarrStr));
 
                 // Disable Subarray Mode
-                var modeControl = subarrayControls.Where(prop => prop.SettingName.Equals(StaticData.Strings.SUBARR_MODE)).First();
-                modeControl.SettingValue = StaticData.SubArr_OFF;
+                var modeControl = subarrayControls.First(prop => prop.SettingName.Equals(_subarrModeStr));
+                modeControl.SettingValue = DCAMPROP.MODE.OFF;
                 modeControl.Setting.setvalue(modeControl.SettingValue);
 
                 // Set New Crop Values
                 var newCrop = auto ? AutoCrop.GetCrop() : ManualCrop.GetCrop();
-                var cropControls = subarrayControls.Where(prop => !prop.SettingName.Equals(StaticData.Strings.SUBARR_MODE));
+
+                var cropControls = subarrayControls.Where(prop => !prop.SettingName.Equals(_subarrModeStr));
                 for (int i = 0; i < cropControls.Count(); i++)
                 {
                     var cropControl = cropControls.ElementAt(i);
                     var newValue = newCrop.ElementAt(i);
                     cropControl.Setting.setgetvalue(ref newValue);
                     cropControl.SettingValue = newValue;
-                    if (cropControl.SettingName.Equals(StaticData.Strings.SUBARR_HPOS))
-                        C13440.FrameFactory.Left = (int)cropControl.SettingValue;
-                    else if (cropControl.SettingName.Equals(StaticData.Strings.SUBARR_VPOS))
-                        C13440.FrameFactory.Top = (int)cropControl.SettingValue;
                 }
 
-                modeControl.SettingValue = auto ? StaticData.SubArr_ON : ManualCrop.Mode;
+                modeControl.SettingValue = auto ? DCAMPROP.MODE.ON : DCAMPROP.MODE.OFF;
                 modeControl.Setting.setvalue(modeControl.SettingValue);
 
                 // Disable user access to subarray settings
@@ -676,35 +607,47 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 {
                     subarrayControl.RefreshValue();
                     if (auto)
-                        subarrayControl.Disable();
+                        subarrayControl.Disable(status);
                     else
-                        subarrayControl.Enable();
+                        subarrayControl.Enable(status);
                 }
+
+                UpdateSubarray();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: UpdateROISettings\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Checks <see cref="CropMode"/> specified in the UI.
+        /// </summary>
+        /// <returns>True for AutoCrop, False for ManualCrop.</returns>
         private bool IsAutoCrop()
         {
             try
             {
-                var cropValues = SettingsHierarchy.Where(ctrl => ctrl.Tag is string && (string)ctrl.Tag == StaticData.Strings.CROP_MODE);
+                var cropValues = SettingsHierarchy.Where(ctrl => ctrl.Tag is string tag && tag == _cropModeStr);
                 if (!cropValues.Any())
                     return false;
 
                 var cropValue = (ComboBox)cropValues.First();
-                return (string)cropValue.SelectedItem == StaticData.Strings.AUTO;
+                return (string)cropValue.SelectedItem == _autoStr;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: IsAutoCrop\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return false;
         }
 
+        /// <summary>
+        /// Returns focus to the <see cref="CalibrationForm"/>. Used to commit changes
+        /// to camera settings that require a <see cref="TextBox"/>.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void UnClickLabel(object sender, EventArgs e)
         {
             try
@@ -713,10 +656,13 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: UnClickLabel\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Loads all settings from an .xml file.
+        /// </summary>
         private void LoadSettings()
         {
             try
@@ -727,65 +673,86 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                     var result = openFileDialog.ShowDialog(this);
                     if (result == DialogResult.OK)
                     {
+                        var settings = new Dictionary<int, double>();
                         using (var reader = XmlReader.Create(openFileDialog.FileName))
                         {
-                            Image_Visualizer.Regions = new List<Rectangle>();
+                            Image_Visualizer.Regions = new List<RegionOfInterest>();
                             while (reader.Read())
                             {
                                 if (reader.Name == "Setting" && reader.HasAttributes && reader.AttributeCount == 2)
                                 {
-                                    CameraProps.Where(prop => prop.m_idProp.getidprop() == int.Parse(reader[0])).First().setvalue(double.Parse(reader[1]));
-
+                                    settings[int.Parse(reader[0])] = double.Parse(reader[1]);
                                     reader.MoveToElement();
                                 }
                                 if(reader.Name == "Region" && reader.HasAttributes && reader.AttributeCount == 4)
                                 {
-                                    Image_Visualizer.Regions.Add(new Rectangle(int.Parse(reader[0]), int.Parse(reader[1]), int.Parse(reader[2]), int.Parse(reader[3])));
+                                    Image_Visualizer.Regions.Add(new RegionOfInterest(int.Parse(reader[0]), int.Parse(reader[1]), int.Parse(reader[2]), int.Parse(reader[3])));
                                     reader.MoveToElement();
                                 }
                                 if(reader.Name == "CropMode" && reader.HasAttributes && reader.AttributeCount == 1)
                                 {
                                     bool auto = reader[0].Equals("Auto");
-                                    SettingsHierarchy.Where(ctrl => ctrl.Tag is string && (string)ctrl.Tag == StaticData.Strings.CROP_MODE).Cast<ComboBox>().First().SelectedIndex = auto ? 0 : 1;
+                                    SettingsHierarchy.Where(ctrl => ctrl.Tag is string tag && tag == _cropModeStr).Cast<ComboBox>().First().SelectedIndex = auto ? 0 : 1;
                                     UpdateROISettings(auto);
                                 }
                             }
                         }
+
+                        // Must commit the subarray setting before other camera settings. Otherwise, we cannot achieve higher frame rates.
+                        var subarraySettings = settings.Where(pair => GetIsSubarray(pair.Key));
+                        var otherSettings = settings.Where(pair => !GetIsSubarray(pair.Key));
+                        foreach (var pair in subarraySettings)
+                            CameraProps.First(prop => prop.m_idProp == pair.Key).setvalue(pair.Value);
+                        foreach (var pair in otherSettings)
+                            CameraProps.First(prop => prop.m_idProp == pair.Key).setvalue(pair.Value);
+                        foreach (var nameValuePair in SettingsHierarchy.OfType<NameValuePair>())
+                            nameValuePair.RefreshValue();
                     }
-                }
-                // TODO: Update the Left and Top values of the frame factory
-                double mode = 0.0;
-                CameraProps.Where(prop => prop.getname() == StaticData.Strings.SUBARR_MODE).First().getvalue(ref mode);
-                if (mode == StaticData.SubArr_ON)
-                {
-                    var hpos = 0.0;
-                    var vpos = 0.0;
-                    CameraProps.Where(prop => prop.getname().Equals(StaticData.Strings.SUBARR_HPOS)).First().getvalue(ref hpos);
-                    CameraProps.Where(prop => prop.getname().Equals(StaticData.Strings.SUBARR_VPOS)).First().getvalue(ref vpos);
-                    C13440.FrameFactory.Left = (int)hpos;
-                    C13440.FrameFactory.Top = (int)vpos;
-                }
-                else
-                {
-                    C13440.FrameFactory.Left = 0;
-                    C13440.FrameFactory.Top = 0;
                 }
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: LoadSettings()\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
+        }
+
+        /// <summary>
+        /// Checks if the specified property ID is related to the camera's subarray.
+        /// </summary>
+        /// <param name="propId">Property ID</param>
+        /// <returns>True for subarray related camera settings.</returns>
+        private static bool GetIsSubarray(int propId)
+        {
+            return propId == DCAMIDPROP.SUBARRAYHPOS || propId == DCAMIDPROP.SUBARRAYHSIZE || propId == DCAMIDPROP.SUBARRAYVPOS || propId == DCAMIDPROP.SUBARRAYVSIZE || propId == DCAMIDPROP.SUBARRAYMODE;
         }
 
         #endregion
 
         #region Open/Close
 
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            if (_failedToLoad)
+            {
+                Console.WriteLine("Failed to detect the camera. Please ensure that it is connected and powered on.");
+                Close();
+            }
+        }
+
+        /// <summary>
+        /// Stores configured properties to the <see cref="C13440"/> instance and disposes
+        /// the temperature timer and subscription.
+        /// </summary>
+        /// <param name="e"></param>
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             try
             {
+                if (_failedToLoad) return;
                 StoreProps();
+                _temperatureTimer.Stop();
+                _temperatureTimer.Dispose();
                 if (Subscription != null)
                 {
                     Subscription.Dispose();
@@ -794,7 +761,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: OnFormClosing\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             finally
             {
@@ -802,26 +769,30 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
         }
 
+        /// <summary>
+        /// Stores camera properties into the <see cref="C13440"/> instance. Also,
+        /// stores the regions of interest, lookup table, and points of interest.
+        /// </summary>
         private void StoreProps()
         {
             try
             {
-                if (C13440.StoredSettings == null)
-                    C13440.StoredSettings = new Dictionary<int, double>();
+                if (_instance.StoredSettings == null)
+                    _instance.StoredSettings = new Dictionary<int, double>();
                 foreach(var prop in CameraProps)
                 {
                     var key = prop.m_idProp.getidprop();
                     var value = 0.0;
                     prop.getvalue(ref value);
-                    C13440.StoredSettings[key] = value;
+                    _instance.StoredSettings[key] = value;
                 }
-                C13440.ImageProcessingProperties.Regions = Image_Visualizer.Regions;
-                C13440.ImageProcessingProperties.LookupTable = LUTControl.LookupTable;
-                C13440.ImageProcessingProperties.PointsOfInterest = LUTControl.PointsOfInterest;
+                _instance.Regions = Image_Visualizer.Regions;
+                _instance.LookupTable = LUTControl.LookupTable;
+                _instance.PointsOfInterest = LUTControl.PointsOfInterest;
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: StoreProps()\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
@@ -829,6 +800,12 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Event Handling
 
+        /// <summary>
+        /// Save button click event handler. Saves camera settings, regions of interest, and crop mode
+        /// to an .xml file.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Save_Button_Click(object sender, EventArgs e)
         {
             try
@@ -841,115 +818,122 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                     var result = saveFileDialog.ShowDialog(this);
                     if (result == DialogResult.OK)
                     {
-                        XmlWriterSettings settings = new XmlWriterSettings();
-                        settings.Indent = true;
-                        using (var writer = XmlWriter.Create(saveFileDialog.FileName, new XmlWriterSettings { Indent = true }))
+                        using var writer = XmlWriter.Create(saveFileDialog.FileName, new XmlWriterSettings { Indent = true });
+                        writer.WriteStartDocument();
+                        writer.WriteStartElement("Settings");
+
+                        foreach (var prop in _instance.CameraProps)
                         {
-                            writer.WriteStartDocument();
-                            writer.WriteStartElement("Settings");
-
-                            foreach(var prop in C13440.CameraProps)
-                            {
-                                var value = 0.0;
-                                prop.getvalue(ref value);
-                                writer.WriteStartElement("Setting");
-                                writer.WriteAttributeString("ID", prop.m_idProp.getidprop().ToString());
-                                writer.WriteAttributeString("Value", value.ToString());
-                                writer.WriteString(prop.getname());
-                                writer.WriteEndElement();
-                            }
-                            foreach(var region in Image_Visualizer.Regions)
-                            {
-                                writer.WriteStartElement("Region");
-                                writer.WriteAttributeString("X", region.X.ToString());
-                                writer.WriteAttributeString("Y", region.Y.ToString());
-                                writer.WriteAttributeString("Width", region.Width.ToString());
-                                writer.WriteAttributeString("Height", region.Height.ToString());
-                                writer.WriteEndElement();
-                            }
-
-                            writer.WriteStartElement("CropMode");
-                            writer.WriteAttributeString("Value", C13440.CropMode.ToString());
+                            var value = 0.0;
+                            prop.getvalue(ref value);
+                            writer.WriteStartElement("Setting");
+                            writer.WriteAttributeString("ID", prop.m_idProp.getidprop().ToString());
+                            writer.WriteAttributeString("Value", value.ToString());
+                            writer.WriteString(prop.getname());
                             writer.WriteEndElement();
-
-                            writer.WriteEndDocument();
-                            writer.Close();
                         }
+                        foreach (var region in Image_Visualizer.Regions)
+                        {
+                            writer.WriteStartElement("Region");
+                            writer.WriteAttributeString("X", region.X.ToString());
+                            writer.WriteAttributeString("Y", region.Y.ToString());
+                            writer.WriteAttributeString("Width", region.Width.ToString());
+                            writer.WriteAttributeString("Height", region.Height.ToString());
+                            writer.WriteEndElement();
+                        }
+
+                        writer.WriteStartElement("CropMode");
+                        writer.WriteAttributeString("Value", _instance.CropMode.ToString());
+                        writer.WriteEndElement();
+
+                        writer.WriteEndDocument();
+                        writer.Close();
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: Save_Button_Click\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Load button click event handler. This requires the camera to be in the
+        /// <see cref="DCAMCAP_STATUS.STABLE"/> state. So capture is paused, buffer is released,
+        /// settings are loaded, buffer is reallocated, and capture is resumed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Load_Button_Click(object sender, EventArgs e)
         {
             try
             {
-                UpdatingProp = StaticData.Strings.SETTINGS;
-                C13440.FrameFactory.BufferReleased += FrameFactory_BufferReleased;
-                C13440.FrameFactory.Acquiring = false;
+                _instance.Capture.PauseAndRelease();
+                LoadSettings();
+                _instance.Capture.ReallocateAndResume();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: Load_Button_Click\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
-        private void Image_Visualizer_RegionChanged(object sender, EventArgs e)
+        /// <summary>
+        /// Handles changes to the regions of interest dependent on the <see cref="CropMode"/>.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Image_Visualizer_RegionsChanged(object sender, EventArgs e)
         {
             try
             {
-                AutoCrop.Crop = Image_Visualizer.NextCrop;
+                AutoCrop.SetCrop(Image_Visualizer.NextCrop, Image_Visualizer.Binning);
                 var auto = IsAutoCrop();
                 if (auto)
                 {
-                    UpdatingProp = StaticData.Strings.AUTO;
-                    C13440.FrameFactory.BufferReleased += FrameFactory_BufferReleased;
-                    C13440.FrameFactory.Acquiring = false;
+                    _instance.Capture.PauseAndRelease();
+                    UpdateROISettings(true);
+                    _instance.Capture.ReallocateAndResume();
+                    Image_Visualizer.CurrentCropLocation = Image_Visualizer.NextCrop.Location;
                 }
+                else
+                    Image_Visualizer.CurrentCropLocation = Image_Visualizer.NextCrop.Location;
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: Image_Visualizer_RegionChanged\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
+        }
+
+        /// <summary>
+        /// Handles changes to the LUT, stores the current LUT and updates the capture with it.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void LUTControl_LUTChanged(object sender, EventArgs e)
+        {
+            _instance.LookupTable = LUTControl.LookupTable;
+            _instance.Capture.UpdateLookupTable();
+        }
+
+        /// <summary>
+        /// Implements the tab select feature for the image visualizer for
+        /// selecting a region of interest in the UI.
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <param name="keyData"></param>
+        /// <returns></returns>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.Tab)
+            {
+                Image_Visualizer.TryTabSelectRegion();
+                return true;
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         #endregion
-
-        private class CropSettings
-        {
-            public double HPos { get; set; }
-            public double HSize { get; set; }
-            public double VPos { get; set; }
-            public double VSize { get; set; }
-            public double Mode { get; set; }
-            public Rectangle Crop
-            {
-                set
-                {
-                    HPos = value.X;
-                    HSize = value.Width;
-                    VPos = value.Y;
-                    VSize = value.Height;
-                }
-            }
-
-            public IEnumerable<double> GetCrop()
-            {
-                yield return HPos;
-                yield return HSize;
-                yield return VPos;
-                yield return VSize;
-            }
-        }
-
-        private void LUTControl_LUTChanged(object sender, EventArgs e)
-        {
-            LookupTable = LUTControl.LookupTable;
-            Image_Visualizer.LookupTable = LookupTable;
-        }
     }
 }

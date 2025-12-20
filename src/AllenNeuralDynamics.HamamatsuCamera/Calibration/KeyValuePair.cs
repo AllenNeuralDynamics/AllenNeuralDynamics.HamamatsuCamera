@@ -11,13 +11,18 @@ using System.Windows.Forms;
 
 namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
+    /// <summary>
+    /// A <see cref="UserControl"/> for displaying and configuring
+    /// a KeyValuePair. Used to populate the <see cref="TableLayoutPanel"/> in the
+    /// <see cref="LUTEditor"/>.
+    /// </summary>
     public partial class KeyValuePair : UserControl
     {
 
         #region Public Members
 
-        public int Key;
-        public int Value;
+        public ushort Key { get; set; }
+        public ushort Value { get; set; }
 
         public event EventHandler KeyChanged;
         public event EventHandler ValueChanged;
@@ -32,20 +37,9 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         #endregion
 
         #region Initialization
-
-        public KeyValuePair(int key, int value)
-        {
-            try
-            {
-                InitializeComponent();
-                CreateInstance(key, value);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: NameValuePair(int {key}, int {value})\nMessage: {ex.Message}");
-            }
-        }
-
+        /// <summary>
+        /// Default constructor for creating a KeyValuePair with no key or value specified.
+        /// </summary>
         public KeyValuePair()
         {
             try
@@ -53,12 +47,34 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 InitializeComponent();
                 CreateInstance();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Console.WriteLine($"Error: NameValuePair()\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Constructs an instance with specified <see cref="ushort"/> key and value.
+        /// </summary>
+        /// <param name="pair"></param>
+        public KeyValuePair(KeyValuePair<ushort, ushort> pair)
+        {
+            try
+            {
+                InitializeComponent();
+                CreateInstance(pair.Key, pair.Value);
+            }
+            catch (Exception ex)
+            {
+                ConsoleLogger.LogError(ex);
+            }
+        }
+
+        /// <summary>
+        /// Constructs an instance with specified <see cref="string"/> key and value.
+        /// </summary>
+        /// <param name="col1"></param>
+        /// <param name="col2"></param>
         public KeyValuePair(string col1, string col2)
         {
             try
@@ -68,65 +84,80 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: NameValuePair(string {col1}, string {col2})\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
-        private void CreateInstance(int key, int value)
+        /// <summary>
+        /// Adds a <see cref="Label"/> for the key and value. Adds a click handler to the value label.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        private void CreateInstance(ushort key, ushort value)
         {
             try
             {
                 Key = key;
-                Value = Math.Min(Math.Max(value, 0), ushort.MaxValue);
+                Value = Math.Min(Math.Max(value, (ushort)0), ushort.MaxValue);
 
                 // Initialize Key
                 Key_Label.Text = Key.ToString();
 
                 // Initialize Value
-                Value_Label = new Label();
-                Value_Label.Text = Value.ToString();
-                Value_Label.Font = new Font(Key_Label.Font, FontStyle.Regular);
-                Value_Label.TextAlign = ContentAlignment.MiddleCenter;
-                Value_Label.BackColor = Key_Label.BackColor;
-                Value_Label.Dock = DockStyle.Fill;
-                Value_Label.Margin = new Padding(3);
-                Value_Label.Padding = new Padding(0);
+                Value_Label = new Label
+                {
+                    Text = Value.ToString(),
+                    Font = new Font(Key_Label.Font, FontStyle.Regular),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    BackColor = Key_Label.BackColor,
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(3),
+                    Padding = new Padding(0)
+                };
                 Value_Label.Click += ValueLabel_Click;
 
                 Top_TableLayoutPanel.Controls.Add(Value_Label, 1, 0);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CreateInstance(int {key}, int {value})\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Adds a <see cref="Label"/> for the key and value. Currently used in the <see cref="LUTEditor"/> to store
+        /// column headers.
+        /// </summary>
+        /// <param name="col1"></param>
+        /// <param name="col2"></param>
         private void CreateInstance(string col1, string col2)
         {
             try
             {
                 Key_Label.Text = col1.ToString();
-                Value_Label = new Label();
-                Value_Label.Text = col2.ToString();
-                Value_Label.Font = new Font(Key_Label.Font, FontStyle.Bold);
-                Value_Label.TextAlign = ContentAlignment.MiddleCenter;
-                Value_Label.BackColor = Key_Label.BackColor;
-                Value_Label.Dock = DockStyle.Fill;
-                Value_Label.Margin = new Padding(3);
-                Value_Label.Padding = new Padding(0);
+                Value_Label = new Label
+                {
+                    Text = col2.ToString(),
+                    Font = new Font(Key_Label.Font, FontStyle.Bold),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    BackColor = Key_Label.BackColor,
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(3),
+                    Padding = new Padding(0)
+                };
 
 
                 Top_TableLayoutPanel.Controls.Add(Value_Label, 1, 0);
-
-                Key = int.MinValue;
-                Value = int.MinValue;
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: CreateInstance(string {col1}, string {col2})\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Create a <see cref="Label"/> for an empty instance. Used to add new items in the <see cref="LUTEditor"/>.
+        /// </summary>
         private void CreateInstance()
         {
             try
@@ -135,31 +166,33 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 Key_Label.Click += ValueLabel_Click;
 
                 // Initialize Value
-                Value_Label = new Label();
-                Value_Label.Font = new Font(Key_Label.Font, FontStyle.Regular);
-                Value_Label.TextAlign = ContentAlignment.MiddleCenter;
-                Value_Label.BackColor = Key_Label.BackColor;
-                Value_Label.Dock = DockStyle.Fill;
-                Value_Label.Margin = new Padding(3);
-                Value_Label.Padding = new Padding(0);
+                Value_Label = new Label
+                {
+                    Font = new Font(Key_Label.Font, FontStyle.Regular),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    BackColor = Key_Label.BackColor,
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(3),
+                    Padding = new Padding(0)
+                };
                 Value_Label.Click += UnClickLabel;
 
                 Top_TableLayoutPanel.Controls.Add(Value_Label, 1, 0);
 
-                Key = int.MaxValue;
-                Value = int.MaxValue;
-
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: CreateInstance()\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
         #endregion
 
         #region Parent Access
-
+        /// <summary>
+        /// Updates the key if it is unique.
+        /// </summary>
+        /// <param name="isUnique"></param>
         public void UpdateKey(bool isUnique)
         {
             try
@@ -180,10 +213,14 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: UpdateKey(bool {isUnique})\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Updates the value.
+        /// </summary>
+        /// <returns>True if the value was empty.</returns>
         public bool UpdateValue()
         {
             bool wasEmpty = false;
@@ -194,7 +231,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: UpdateValue()\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return wasEmpty;
         }
@@ -203,6 +240,11 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Event Handling
 
+        /// <summary>
+        /// Puts focus on the key label to commit a change to the <see cref="TextBox"/>.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void UnClickLabel(object sender, EventArgs e)
         {
             try
@@ -213,56 +255,63 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: UnClickLabel\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Swaps the value label with a <see cref="TextBox"/> for editing the value.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ValueLabel_Click(object sender, EventArgs e)
         {
             try
             {
-                if (sender is Control)
+                if (sender is Label valueLabel)
                 {
-                    var valueControl = (Control)sender;
-                    if (valueControl is Label)
+                    TextBox tb = null;
+                    // If a TextBox is already embedded:
+                    if (valueLabel.Controls.Count > 0)
                     {
-                        var valueLabel = (Label)valueControl;
-                        TextBox tb = null;
-                        // If a TextBox is already embedded:
-                        if (valueLabel.Controls.Count > 0)
+                        // Reference it
+                        tb = ((TextBox)valueLabel.Controls[0]);
+                        // If it is already visible, it was clicked from outside, so hide it
+                        if (tb.Visible)
                         {
-                            // Reference it
-                            tb = ((TextBox)valueLabel.Controls[0]);
-                            // If it is already visible, it was clicked from outside, so hide it
-                            if (tb.Visible)
-                            {
-                                valueLabel.Text = tb.Text;
-                                tb.Hide();
-                                return;
-                            }
+                            valueLabel.Text = tb.Text;
+                            tb.Hide();
+                            return;
                         }
-                        else
-                        {
-                            tb = new TextBox();
-                            tb.Parent = valueLabel;
-                            tb.Size = valueLabel.Size;
-                            tb.LostFocus += TextBox_LostFocus;
-                            tb.KeyPress += TextBox_KeyPress;
-                        }
-                        tb.Text = valueLabel.Text;
-                        tb.Show();
-                        tb.Focus();
-                        if (RowSelected != null)
-                            RowSelected.Invoke(this, EventArgs.Empty);
                     }
+                    else
+                    {
+                        tb = new TextBox
+                        {
+                            Parent = valueLabel,
+                            Size = valueLabel.Size
+                        };
+                        tb.LostFocus += TextBox_LostFocus;
+                        tb.KeyPress += TextBox_KeyPress;
+                    }
+                    tb.Text = valueLabel.Text;
+                    tb.Show();
+                    tb.Focus();
+                    if (RowSelected != null)
+                        RowSelected.Invoke(this, EventArgs.Empty);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: ValueLabel_Click\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Filters out key presses that are non integer numeric.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TextBox_KeyPress(object sender, KeyPressEventArgs e)
         {
             try
@@ -271,12 +320,12 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 var keyChar = e.KeyChar;
                 bool invalidCharEntered;
 
-                // Filter 
-                
+                // Filter
+
                 invalidCharEntered = IsNonIntegerNumeric(keyChar);
 
-                // If and invalid char was entered:
-                if (invalidCharEntered == true)
+                // If an invalid char was entered:
+                if (invalidCharEntered)
                 {
                     // Stop the character from being entered into the Control.
                     e.Handled = true;
@@ -284,42 +333,41 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: TextBox_KeyPress\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Submit a new value for the key or label.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TextBox_LostFocus(object sender, EventArgs e)
         {
             try
             {
-                if (sender is TextBox)
+                if (sender is TextBox tb && tb.Parent is Label label)
                 {
-                    var tb = (TextBox)sender;
-                    var label = tb.Parent;
-                    if (label != null && label is Label)
+                    ushort.TryParse(tb.Text, out ushort res);
+                    if (label == Key_Label)
                     {
-                        label = (Label)label;
-                        double.TryParse(tb.Text, out double res);
-                        if(label == Key_Label)
-                        {
-                            // TODO: Verify Key is Unique
-                            Key = Math.Min(Math.Max((int)res, 0), ushort.MaxValue);
-                            if (KeyChanged != null)
-                                KeyChanged.Invoke(this, EventArgs.Empty);
-                        }
-                        else
-                        {
-                            Value = Math.Min(Math.Max((int)res, 0), ushort.MaxValue);
-                            if (ValueChanged != null)
-                                ValueChanged.Invoke(this, EventArgs.Empty);
-                        }
-                        tb.Hide();
+                        // TODO: Verify Key is Unique
+                        Key = Math.Min(Math.Max(res, (ushort)0), ushort.MaxValue);
+                        if (KeyChanged != null)
+                            KeyChanged.Invoke(this, EventArgs.Empty);
                     }
+                    else
+                    {
+                        Value = Math.Min(Math.Max(res, (ushort)0), ushort.MaxValue);
+                        if (ValueChanged != null)
+                            ValueChanged.Invoke(this, EventArgs.Empty);
+                    }
+                    tb.Hide();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: TextBox_LostFocus\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
@@ -327,6 +375,11 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Helper Functions
 
+        /// <summary>
+        /// Check if the key char is a digit or is control.
+        /// </summary>
+        /// <param name="keyChar"></param>
+        /// <returns>True if is a digit or control key.</returns>
         private static bool IsNonIntegerNumeric(char keyChar)
         {
             try
@@ -338,7 +391,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: IsNonIntegerNumeric\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return false;
         }

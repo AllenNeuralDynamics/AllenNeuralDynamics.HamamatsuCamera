@@ -11,31 +11,37 @@ using System.Windows.Forms;
 
 namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 {
+    /// <summary>
+    /// User control for displaying and configuring camera settings
+    /// </summary>
     public partial class NameValuePair : UserControl
     {
 
         #region Public Members
 
-        public event EventHandler ReleaseBuffer;
-        public event EventHandler StartAcquisition;
-        public event EventHandler RefreshProps;
+        public event EventHandler DataStreamPropChangeRequest;
+        public event EventHandler EffectiveChangeOccurred;
 
-        public string SettingName;
-        public double SettingValue;
-        public bool ReadOnly;
-        public DCAM_PROP_MANAGER Setting;
+        public string SettingName { get; private set; }
+        public DCAM_PROP_MANAGER Setting { get; private set; }
+        public double SettingValue { get; set; }
 
         #endregion
 
         #region Private Members
 
-        private ComboBox ValueComboBox;
-        private Label ValueLabel;
-        private KeyFilterType KeyFilter;
-        private string Units;
-        private bool DataStream;
-        private bool IsModal;
-        private static Dictionary<int, string> UnitDictionary = new Dictionary<int, string>()
+        private ComboBox  _valueComboBox;
+        private Label  _valueLabel;
+        private KeyFilterType _keyFilter;
+        private bool _canEdit;
+        private bool _isEnabled;
+        private readonly bool _isModal;
+        private readonly bool _isDataStream;
+        private readonly bool _isWritable;
+        private readonly bool _isAccessBusy;
+        private readonly bool _isEffective;
+        private readonly string _units;
+        private readonly static Dictionary<int, string> _unitDictionary = new Dictionary<int, string>()
         {
             { 0 , ""        },
             { 1 , " Sec"    },
@@ -49,52 +55,68 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Initialization
 
+        /// <summary>
+        /// Initialize component and read attributes of the <see cref="DCAM_PROP_MANAGER"/>.
+        /// </summary>
+        /// <param name="setting">Camera property</param>
         public NameValuePair(DCAM_PROP_MANAGER setting)
         {
             try
             {
                 InitializeComponent();
                 Setting = setting;
+                var attr = new DCAMPROPATTRIBUTE(Setting.m_attr.attribute);
+                _isEnabled = true;
+                _isModal = attr.is_type(DCAMPROPATTRIBUTE.TYPE_MODE);
+                _isDataStream = attr.has_attr(DCAMPROPATTRIBUTE.DATASTREAM) || Setting.m_idProp.Equals(DCAMIDPROP.EXPOSURETIME) || Setting.m_idProp.Equals(DCAMIDPROP.IMAGE_PIXELTYPE);
+                _isWritable = attr.has_attr(DCAMPROPATTRIBUTE.WRITABLE);
+                _isAccessBusy = attr.has_attr(DCAMPROPATTRIBUTE.ACCESSBUSY);
+                _isEffective = attr.has_attr(DCAMPROPATTRIBUTE.EFFECTIVE);
+                _units = _unitDictionary[Setting.m_attr.iUnit];
+                _canEdit = GetCanEdit(DCAMCAP_STATUS.BUSY);
                 CreateInstance();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: NameValuePair\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Default constructor used when <see cref="CalibrationForm"/> fails to create a camera setting UI object.
+        /// </summary>
         public NameValuePair()
         {
-
+            // Do nothing
         }
 
+        /// <summary>
+        /// Initialize members, create value control dependent on whether the property is modal or not.
+        /// Update the state.
+        /// </summary>
         private void CreateInstance()
         {
             try
             {
-                // Get relevant Attribute Information
-                ReadOnly = Setting.is_attr_readonly();
-                IsModal = Setting.is_attrtype_mode();
-                var attr = new DCAMPROPATTRIBUTE(Setting.m_attr.attribute);
-                DataStream = attr.has_attr(DCAMPROPATTRIBUTE.DATASTREAM);
-
                 // Initialize Name
                 SettingName = Setting.getname();
                 Name_Label.Text = string.Join(" ", SettingName.Split(' ').Select(str => str[0].ToString().ToUpper() + str.Substring(1).ToLower()));
-                Name_Label.BackColor = ReadOnly ? Color.LightGray : Color.Transparent;
 
                 // Initialize ValueControl
-                Setting.getvalue(ref SettingValue);
-                // If Modal, create ValueComboBox
-                if (IsModal)
+                var settingValue = 0.0;
+                Setting.getvalue(ref settingValue);
+                SettingValue = settingValue;
+                // If Modal, create  _valueComboBox
+                if (_isModal)
                 {
                     // Make ComboBox Representation
-                    ValueComboBox = new ComboBox();
-                    ValueComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
-                    ValueComboBox.Font = new Font(Name_Label.Font, FontStyle.Regular);
-                    ValueComboBox.Dock = DockStyle.Fill;
-                    ValueComboBox.Margin = new Padding(3);
-                    ValueComboBox.BackColor = ReadOnly ? Color.LightGray : Color.White;
+                    _valueComboBox = new ComboBox
+                    {
+                        DropDownStyle = ComboBoxStyle.DropDownList,
+                        Font = new Font(Name_Label.Font, FontStyle.Regular),
+                        Dock = DockStyle.Fill,
+                        Margin = new Padding(3),
+                    };
                     // Loop through each possible value of property
                     double tempVal;
                     tempVal = Setting.m_attr.valuemin;
@@ -104,47 +126,129 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                         var text = Setting.getvaluetext(tempVal);
 
                         // Add text/value pair as ComboboxItem
-                        ValueComboBox.Items.Add(new ComboboxItem() { Text = text, Value = tempVal });
+                         _valueComboBox.Items.Add(new ComboboxItem() { Text = text, Value = tempVal });
 
                         // Break out when no next possible value
                         if (!Setting.queryvalue_next(ref tempVal))
                             break;
                     }
 
-                    ValueComboBox.SelectedItem = ValueComboBox.Items.Cast<ComboboxItem>().Where(item => item.Value == SettingValue).First();
-                    ValueComboBox.SelectionChangeCommitted += ValueComboBox_SelectionChangeCommitted;
+                     _valueComboBox.SelectedItem =  _valueComboBox.Items.Cast<ComboboxItem>().First(item => (int)item.Value == (int)SettingValue);
+                     _valueComboBox.SelectionChangeCommitted += ValueComboBox_SelectionChangeCommitted;
 
                 }
 
-                Units = UnitDictionary[Setting.m_attr.iUnit];
-                KeyFilter = Setting.m_attr.iUnit == 0 ? KeyFilterType.Integer : KeyFilterType.Decimal;
-                ValueLabel = new Label();
-                ValueLabel.Text = Setting.getvaluetext((double)SettingValue) + Units;
-                ValueLabel.Font = new Font(Name_Label.Font, FontStyle.Regular);
-                ValueLabel.TextAlign = ContentAlignment.MiddleLeft;
-                ValueLabel.Dock = DockStyle.Fill;
-                ValueLabel.Margin = new Padding(3);
-                ValueLabel.Padding = new Padding(0);
-                ValueLabel.BackColor = ReadOnly ? Color.LightGray : Color.Transparent;
-                if (!ReadOnly) ValueLabel.Click += ValueLabel_Click;
-                else ValueLabel.Click += UnClickLabel;
+                _keyFilter = Setting.m_attr.iUnit == 0 ? KeyFilterType.Integer : KeyFilterType.Decimal;
+                _valueLabel = new Label
+                {
+                    Text = Setting.getvaluetext(SettingValue) + _units,
+                    Font = new Font(Name_Label.Font, FontStyle.Regular),
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(3),
+                    Padding = new Padding(0)
+                };
 
-                // Initialize Name_Label
-                if (ValueComboBox != null && !ReadOnly)
-                    Top_TableLayoutPanel.Controls.Add(ValueComboBox, 1, 0);
-                else
-                    Top_TableLayoutPanel.Controls.Add(ValueLabel, 1, 0);
+                UpdateState();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CreateInstance\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
+        }
+
+        /// <summary>
+        /// Update which UserControl is displayed based on whether the setting is currently editable.
+        /// Also, updates the appropriate event handler.
+        /// </summary>
+        private void UpdateState()
+        {
+            if (_canEdit)
+            {
+                Name_Label.BackColor = Color.Transparent;
+                if (_valueComboBox != null)
+                {
+                    _valueComboBox.BackColor = Color.White;
+                    RemoveControl(_valueLabel);
+                    AddControl(_valueComboBox);
+                }
+                else
+                {
+                    RemoveControl(_valueComboBox);
+                    AddControl(_valueLabel);
+                }
+                _valueLabel.BackColor = Color.Transparent;
+                _valueLabel.Click -= UnClickLabel;
+                _valueLabel.Click -= ValueLabel_Click;
+                _valueLabel.Click += ValueLabel_Click;
+            }
+            else
+            {
+                Name_Label.BackColor = Color.LightGray;
+                if (_valueComboBox != null)
+                    _valueComboBox.BackColor = Color.LightGray;
+                _valueLabel.BackColor = Color.LightGray;
+                _valueLabel.Click -= UnClickLabel;
+                _valueLabel.Click -= ValueLabel_Click;
+                _valueLabel.Click += UnClickLabel;
+                RemoveControl(_valueLabel);
+                RemoveControl(_valueComboBox);
+                AddControl(_valueLabel);
+            }
+        }
+
+        /// <summary>
+        /// Add a control to the <see cref="TableLayoutPanel"/> if it is not already added.
+        /// </summary>
+        /// <param name="control">Control to add</param>
+        private void AddControl(Control control)
+        {
+            if (control == null)
+                return;
+            if (control.Parent != Top_TableLayoutPanel)
+                Top_TableLayoutPanel.Controls.Add(control, 1, 0);
+        }
+
+        /// <summary>
+        /// Remove a control from the <see cref="TableLayoutPanel"/> if it is already added.
+        /// </summary>
+        /// <param name="control"></param>
+        private void RemoveControl(Control control)
+        {
+            if (control == null)
+                return;
+            if (control.Parent == Top_TableLayoutPanel)
+                Top_TableLayoutPanel.Controls.Remove(control);
+        }
+
+        /// <summary>
+        /// Check if the setting is editable based on several factors.
+        /// </summary>
+        /// <param name="status"></param>
+        /// <returns></returns>
+        private bool GetCanEdit(DCAMCAP_STATUS status)
+        {
+            if (_isEnabled && _isDataStream)
+                return true;
+
+            if (!_isEnabled || !_isWritable || status == DCAMCAP_STATUS.ERROR || status == DCAMCAP_STATUS.UNSTABLE)
+                return false;
+
+            if (status == DCAMCAP_STATUS.STABLE)
+                return true;
+
+            return _isAccessBusy;
         }
 
         #endregion
 
         #region Event Handling
 
+        /// <summary>
+        /// Change focus to the Name Label to commit changes from Value TextBox
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void UnClickLabel(object sender, EventArgs e)
         {
             try
@@ -153,87 +257,98 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: UnClickLabel\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
-        private void ValueComboBox_SelectionChangeCommitted(object sender, EventArgs e)
+        /// <summary>
+        /// Update the cached setting value. Then either invoke the DataStreamPropChangeRequest
+        /// or set the camera setting based on the DataStream attribute. Additionally,
+        /// if the camera setting is changed and the Effective attribute is present, then invoke
+        /// the EffectiveChangeOccurred event to notify the <see cref="CalibrationForm"/> that a refresh is
+        /// required for other settings.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void  ValueComboBox_SelectionChangeCommitted(object sender, EventArgs e)
         {
             try
             {
-                if (sender is Control)
+                if(sender is ComboBox valueComboBox)
                 {
-                    var valueControl = (Control)sender;
-                    if (valueControl is ComboBox)
+                    var selectedItem = (ComboboxItem)valueComboBox.SelectedItem;
+                    SettingValue = selectedItem.Value;
+                    if (_isDataStream)
+                        DataStreamPropChangeRequest.Invoke(this, EventArgs.Empty);
+                    else
                     {
-                        var valueComboBox = (ComboBox)valueControl;
-
-                        var selectedItem = (ComboboxItem)valueComboBox.SelectedItem;
-                        SettingValue = selectedItem.Value;
-
-                        if (DataStream)
-                            ReleaseBuffer.Invoke(this, EventArgs.Empty);
-                        else
-                        {
-                            var val = (double)SettingValue;
-                            Setting.setgetvalue(ref val);
-                            SettingValue = val;
-                            valueComboBox.SelectedItem = valueComboBox.Items.Cast<ComboboxItem>().Where(item => item.Value == (double)SettingValue).First();
-                            RefreshProps.Invoke(this, EventArgs.Empty);
-                        }
+                        var val = SettingValue;
+                        Setting.setgetvalue(ref val);
+                        SettingValue = val;
+                        valueComboBox.SelectedItem = valueComboBox.Items.Cast<ComboboxItem>().First(item => (int)item.Value == (int)SettingValue);
+                        if (_isEffective)
+                            EffectiveChangeOccurred?.Invoke(this, EventArgs.Empty);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: ValueComboBox_SelectionChangeCommitted\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
-        private void ValueLabel_Click(object sender, EventArgs e)
+        /// <summary>
+        /// Replace the <see cref="Label"/> with a <see cref="TextBox"/>
+        /// to allow the user to configure the setting value.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void  ValueLabel_Click(object sender, EventArgs e)
         {
             try
             {
-                if (sender is Control)
+                if (sender is Label valueLabel)
                 {
-                    var valueControl = (Control)sender;
-                    if (valueControl is Label)
+                    TextBox tb = null;
+                    // If a TextBox is already embedded:
+                    if (valueLabel.Controls.Count > 0)
                     {
-                        var valueLabel = (Label)valueControl;
-                        TextBox tb = null;
-                        // If a TextBox is already embedded:
-                        if (valueLabel.Controls.Count > 0)
+                        // Reference it
+                        tb = ((TextBox)valueLabel.Controls[0]);
+                        // If it is already visible, it was clicked from outside, so hide it
+                        if (tb.Visible)
                         {
-                            // Reference it
-                            tb = ((TextBox)valueLabel.Controls[0]);
-                            // If it is already visible, it was clicked from outside, so hide it
-                            if (tb.Visible)
-                            {
-                                valueLabel.Text = tb.Text + Units;
-                                tb.Hide();
-                                return;
-                            }
+                            valueLabel.Text = tb.Text + _units;
+                            tb.Hide();
+                            return;
                         }
-                        else
-                        {
-                            tb = new TextBox();
-                            tb.Parent = valueLabel;
-                            tb.Size = valueLabel.Size;
-                            tb.LostFocus += TextBox_LostFocus;
-                            tb.KeyPress += TextBox_KeyPress;
-                        }
-                        tb.Text = valueLabel.Text;
-                        tb.Show();
-                        tb.Focus();
                     }
+                    else
+                    {
+                        tb = new TextBox
+                        {
+                            Parent = valueLabel,
+                            Size = valueLabel.Size
+                        };
+                        tb.LostFocus += TextBox_LostFocus;
+                        tb.KeyPress += TextBox_KeyPress;
+                    }
+                    tb.Text = valueLabel.Text.Substring(0, valueLabel.Text.Length - _units.Length);
+                    tb.Show();
+                    tb.Focus();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: ValueLabel_Click\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Apply the key filter
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TextBox_KeyPress(object sender, KeyPressEventArgs e)
         {
             try
@@ -243,7 +358,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 bool invalidCharEntered;
 
                 // Filter based on the specified type of key filter, tracking if an invalid char was entered.
-                switch (KeyFilter)
+                switch (_keyFilter)
                 {
                     case KeyFilterType.Integer:
                         invalidCharEntered = IsNonIntegerNumeric(keyChar);
@@ -257,7 +372,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 }
 
                 // If and invalid char was entered:
-                if (invalidCharEntered == true)
+                if (invalidCharEntered)
                 {
                     // Stop the character from being entered into the Control.
                     e.Handled = true;
@@ -265,45 +380,45 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: TextBox_KeyPress\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Commit changes to the <see cref="TextBox"/> to update the settings or notify the
+        /// <see cref="CalibrationForm"/> that a DataStreamPropChange is requested.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void TextBox_LostFocus(object sender, EventArgs e)
         {
             try
             {
-                if (sender is TextBox)
+                if (sender is TextBox tb && tb.Parent is Label label)
                 {
-                    var tb = (TextBox)sender;
-                    var label = tb.Parent;
-                    if (label != null && label is Label)
+                    double.TryParse(tb.Text, out double res);
+                    SettingValue = res;
+                    if (_isDataStream)
                     {
-                        // TODO: Check if in range
-                        label = (Label)label;
-                        double.TryParse(tb.Text, out double res);
-                        SettingValue = res;
-
-                        if (DataStream)
-                        {
-                            tb.Hide();
-                            ReleaseBuffer.Invoke(this, EventArgs.Empty);
-                        }
-                        else
-                        {
-                            var val = (double)SettingValue;
-                            Setting.setgetvalue(ref val);
-                            SettingValue = val;
-                            label.Text = Setting.getvaluetext((double)SettingValue);
-                            tb.Hide();
-                            RefreshProps.Invoke(this, EventArgs.Empty);
-                        }
+                        label.Text = string.Empty;
+                        tb.Hide();
+                        DataStreamPropChangeRequest.Invoke(this, EventArgs.Empty);
+                    }
+                    else
+                    {
+                        var val = SettingValue;
+                        Setting.setgetvalue(ref val);
+                        SettingValue = val;
+                        label.Text = Setting.getvaluetext(SettingValue);
+                        tb.Hide();
+                        if (_isEffective)
+                            EffectiveChangeOccurred?.Invoke(this, EventArgs.Empty);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: TextBox_LostFocus\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
@@ -311,73 +426,81 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Form Access
 
-        internal void Disable()
+        /// <summary>
+        /// Disable this user control.
+        /// </summary>
+        /// <param name="status"></param>
+        internal void Disable(DCAMCAP_STATUS status)
         {
             try
             {
-                ReadOnly = true;
-                if (ValueComboBox != null)
-                {
-                    Top_TableLayoutPanel.Controls.RemoveAt(1);
-                    Top_TableLayoutPanel.Controls.Add(ValueLabel, 1, 0);
-                }
-                ValueLabel.BackColor = Color.LightGray;
-                ValueLabel.Click -= ValueLabel_Click;
+                _isEnabled = false;
+                _canEdit = GetCanEdit(status);
+                UpdateState();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: Disable\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
-        internal void Enable()
+        /// <summary>
+        /// Enable this user control.
+        /// </summary>
+        /// <param name="status"></param>
+        internal void Enable(DCAMCAP_STATUS status)
         {
             try
             {
-                ReadOnly = false;
-                if (ValueComboBox != null)
-                {
-                    Top_TableLayoutPanel.Controls.RemoveAt(1);
-                    Top_TableLayoutPanel.Controls.Add(ValueComboBox, 1, 0);
-                }
-                ValueLabel.BackColor = Color.Transparent;
-
-                ValueLabel.Click += ValueLabel_Click;
+                _isEnabled = true;
+                _canEdit = GetCanEdit(status);
+                UpdateState();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: Enable\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Refresh the setting value.
+        /// </summary>
         internal void RefreshValue()
         {
             try
             {
-                Setting.getvalue(ref SettingValue);
-                if (ValueComboBox != null)
-                    ValueComboBox.SelectedItem = ValueComboBox.Items.Cast<ComboboxItem>().Where(item => item.Value == (double)SettingValue).First();
-                ValueLabel.Text = Setting.getvaluetext(SettingValue) + Units;
+                var settingValue = 0.0;
+                Setting.getvalue(ref settingValue);
+                SettingValue = settingValue;
+                if ( _valueComboBox != null)
+                     _valueComboBox.SelectedItem =  _valueComboBox.Items.Cast<ComboboxItem>().First(item => (int)item.Value == (int)SettingValue);
+                 _valueLabel.Text = Setting.getvaluetext(SettingValue) + _units;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: RefreshValue\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
+        /// <summary>
+        /// Update the setting value.
+        /// </summary>
         internal void UpdateValue()
         {
             try
             {
-                Setting.setgetvalue(ref SettingValue);
-                if (ValueComboBox != null)
-                    ValueComboBox.SelectedItem = ValueComboBox.Items.Cast<ComboboxItem>().Where(item => item.Value == SettingValue).First();
-                ValueLabel.Text = Setting.getvaluetext(SettingValue) + Units;
-                StartAcquisition.Invoke(this, EventArgs.Empty);
+                var settingValue = SettingValue;
+                Setting.setgetvalue(ref settingValue);
+                SettingValue = settingValue;
+                if ( _valueComboBox != null)
+                     _valueComboBox.SelectedItem =  _valueComboBox.Items.Cast<ComboboxItem>().First(item => (int)item.Value == (int)SettingValue);
+                 _valueLabel.Text = Setting.getvaluetext(SettingValue) + _units;
+                if (_isEffective)
+                    EffectiveChangeOccurred?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: UpdateValue\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
@@ -385,6 +508,11 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Helper Functions
 
+        /// <summary>
+        /// Non integer numeric filter
+        /// </summary>
+        /// <param name="keyChar">Key char</param>
+        /// <returns>False if character is digit or control char</returns>
         private static bool IsNonIntegerNumeric(char keyChar)
         {
             try
@@ -396,11 +524,16 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: IsNonIntegerNumeric\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return false;
         }
 
+        /// <summary>
+        /// Non decimal numeric filter
+        /// </summary>
+        /// <param name="keyChar">key char</param>
+        /// <returns>False if character is digit or control or "."</returns>
         private static bool IsNonDecimalNumeric(char keyChar)
         {
             try
@@ -412,7 +545,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: IsNonDecimalNumeric\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
             return false;
         }
@@ -421,7 +554,10 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Custom Data Types
 
-        private class ComboboxItem
+        /// <summary>
+        /// Items in the <see cref="ComboBox"/> used to represent modal camera settings
+        /// </summary>
+        private sealed class ComboboxItem
         {
             public string Text { get; set; }
             public double Value { get; set; }
@@ -431,6 +567,9 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
         }
 
+        /// <summary>
+        /// Key filtering options
+        /// </summary>
         private enum KeyFilterType
         {
             None,
