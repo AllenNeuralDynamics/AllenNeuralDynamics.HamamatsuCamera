@@ -24,17 +24,10 @@
           <p1:Overwrite>false</p1:Overwrite>
         </Combinator>
       </Expression>
-      <Expression xsi:type="Combinator">
-        <Combinator xsi:type="p1:TiffWriter">
-          <p1:Suffix>Timestamp</p1:Suffix>
-          <p1:FramesPerTiff>1000</p1:FramesPerTiff>
-        </Combinator>
-      </Expression>
     </Nodes>
     <Edges>
       <Edge From="0" To="1" Label="Source1" />
       <Edge From="1" To="2" Label="Source1" />
-      <Edge From="1" To="3" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>
