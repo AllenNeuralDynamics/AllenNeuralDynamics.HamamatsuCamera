@@ -10,6 +10,9 @@ using System.Xml.Serialization;
 
 namespace AllenNeuralDynamics.HamamatsuCamera
 {
+    /// <summary>
+    /// The main interface to the Hamamatsu Camera. It is responsible for camera initialization, configuration, and image acquisition.
+    /// </summary>
     [Description("Generates a sequence of images from Hamamatsu Cameras.")]
     [Editor("AllenNeuralDynamics.HamamatsuCamera.Calibration.C13440Editor, AllenNeuralDynamics.HamamatsuCamera", typeof(ComponentEditor))]
     public class C13440 : Source<IFrameContainer>

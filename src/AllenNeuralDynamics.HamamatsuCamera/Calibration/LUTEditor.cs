@@ -197,15 +197,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                 if(sender is KeyValuePair pair)
                 {
                     _pointsOfInterest[pair.Key] = pair.Value;
-                    if (pair.UpdateValue())
-                    {
-                        var newPair = new KeyValuePair();
-                        newPair.KeyChanged += KeyChanged;
-                        newPair.ValueChanged += ValueChanged;
-                        newPair.RowSelected += RowSelected;
-                        POI_Table.Controls.Add(newPair);
-                    }
-
+                    pair.UpdateValue();
                     UpdateLUT();
                 }
             }
@@ -233,6 +225,11 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                         var orderedPairs = POI_Table.Controls.OfType<KeyValuePair>().OrderBy(row => row.Key).ToArray();
                         POI_Table.Controls.Clear();
                         POI_Table.Controls.AddRange(orderedPairs);
+                        var newPair = new KeyValuePair();
+                        newPair.KeyChanged += KeyChanged;
+                        newPair.ValueChanged += ValueChanged;
+                        newPair.RowSelected += RowSelected;
+                        POI_Table.Controls.Add(newPair);
                     }
 
                     pair.UpdateKey(isUnique);

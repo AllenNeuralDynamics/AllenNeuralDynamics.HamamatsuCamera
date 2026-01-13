@@ -117,7 +117,8 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             CameraProps = _instance.CameraProps;
             Settings_Panel.Controls.Add(CreateSettingsTable());
             if (_instance.Regions != null)
-                Image_Visualizer.Regions = _instance.Regions;
+                Image_Visualizer.Regions = new List<RegionOfInterest>(_instance.Regions);   // Need a clone here to prevent CameraCapture from altering Regions in the UI while we are configuring.
+            UpdateSubarray();
             Image_Visualizer.RegionsChanged += Image_Visualizer_RegionsChanged;
             LUTControl.LoadLUT(_instance.PointsOfInterest);
         }
@@ -674,6 +675,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                     if (result == DialogResult.OK)
                     {
                         var settings = new Dictionary<int, double>();
+                        bool auto = true;
                         using (var reader = XmlReader.Create(openFileDialog.FileName))
                         {
                             Image_Visualizer.Regions = new List<RegionOfInterest>();
@@ -691,22 +693,36 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                                 }
                                 if(reader.Name == "CropMode" && reader.HasAttributes && reader.AttributeCount == 1)
                                 {
-                                    bool auto = reader[0].Equals("Auto");
+                                    auto = reader[0].Equals("Auto");
                                     SettingsHierarchy.Where(ctrl => ctrl.Tag is string tag && tag == _cropModeStr).Cast<ComboBox>().First().SelectedIndex = auto ? 0 : 1;
-                                    UpdateROISettings(auto);
+                                    Image_Visualizer.CropMode = auto ? CropMode.Auto : CropMode.Manual;
+                                    _instance.CropMode = Image_Visualizer.CropMode;
                                 }
                             }
                         }
 
+
                         // Must commit the subarray setting before other camera settings. Otherwise, we cannot achieve higher frame rates.
                         var subarraySettings = settings.Where(pair => GetIsSubarray(pair.Key));
                         var otherSettings = settings.Where(pair => !GetIsSubarray(pair.Key));
+
+                        // Must turn Subarray Mode off before changing subarray
+                        CameraProps.First(prop => prop.m_idProp == DCAMIDPROP.SUBARRAYMODE).setvalue(DCAMPROP.MODE.OFF);
+
                         foreach (var pair in subarraySettings)
-                            CameraProps.First(prop => prop.m_idProp == pair.Key).setvalue(pair.Value);
+                        {
+                            if(CameraProps.Any(prop => prop.m_idProp == pair.Key))
+                                CameraProps.First(prop => prop.m_idProp == pair.Key).setvalue(pair.Value);
+                        }
                         foreach (var pair in otherSettings)
-                            CameraProps.First(prop => prop.m_idProp == pair.Key).setvalue(pair.Value);
+                        {
+                            if(CameraProps.Any(prop => prop.m_idProp == pair.Key))
+                                CameraProps.First(prop => prop.m_idProp == pair.Key).setvalue(pair.Value);
+                        }
                         foreach (var nameValuePair in SettingsHierarchy.OfType<NameValuePair>())
                             nameValuePair.RefreshValue();
+
+                        UpdateSubarray();
                     }
                 }
             }
@@ -730,6 +746,10 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         #region Open/Close
 
+        /// <summary>
+        /// Closes the form if it failed to load.
+        /// </summary>
+        /// <param name="e"></param>
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
@@ -896,8 +916,6 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                     _instance.Capture.ReallocateAndResume();
                     Image_Visualizer.CurrentCropLocation = Image_Visualizer.NextCrop.Location;
                 }
-                else
-                    Image_Visualizer.CurrentCropLocation = Image_Visualizer.NextCrop.Location;
             }
             catch(Exception ex)
             {

@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Point = System.Drawing.Point;
@@ -38,13 +39,14 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
         [Browsable(false)]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public List<RegionOfInterest> Regions { get; set; } = new List<RegionOfInterest>();
+        public List<RegionOfInterest> Regions { get; set; }
         public Point CurrentCropLocation { get; set; }
         public Rectangle NextCrop { get; set; }
         public CropMode CropMode { get; set; }
         public int SelectedRegion { get; set; }
         internal int ImageFullWidth { get; set; }
         internal int ImageFullHeight { get; set; }
+        internal bool IsSubarrayOn { get; set; }
 
 
         /// <summary>
@@ -56,6 +58,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                           ControlStyles.AllPaintingInWmPaint |
                           ControlStyles.UserPaint, true);
             UpdateStyles();
+            Regions = new List<RegionOfInterest>();
         }
 
         /// <summary>
@@ -179,6 +182,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                         ushort* inBase = (ushort*)image.ImageData;
                         byte* outBase = (byte*)outBitmapData.Scan0;
 
+                        int inStride = image.WidthStep / sizeof(ushort);
                         int outStride = outBitmapData.Stride;
 
                         Parallel.For(0, outHeightInPixels, outY =>
@@ -192,10 +196,9 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                                 int srcX = packed & 0xFFFF;
 
                                 ushort* inPixel = inBase + srcY * image.Width + srcX;
-                                byte pixelValue = (byte)((*inPixel) >> 8);
-
-                                byte scaledValue = (byte)Math.Min(pixelValue * imageScale, byte.MaxValue);
-
+                                byte scaledValue = (byte)Math.Min(
+                                    *inPixel * imageScale * (255.0 / 65535.0),
+                                    255.0);
                                 int outOffset = outX * 3;
                                 outRow[outOffset + 0] = scaledValue; // B
                                 outRow[outOffset + 1] = scaledValue; // G
@@ -268,7 +271,12 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                             for (var i = 0; i < Regions.Count; i++)
                             {
                                 var region = Regions[i];
-                                var rect = new Rectangle(region.X, region.Y, region.Width, region.Height);
+                                Rectangle rect;
+                                if(CropMode == CropMode.Manual && IsSubarrayOn)
+                                    rect = new Rectangle(region.X - CurrentCropLocation.X, region.Y - CurrentCropLocation.Y, region.Width, region.Height);
+                                else
+                                    rect = new Rectangle(region.X, region.Y, region.Width, region.Height);
+
                                 var scaledRect = ScaleRectangle(rect);
                                 var regionPen = nonSelectedRegionPen;
                                 var fontSize = Math.Max(Math.Min(scaledRect.Height * LabelFontScale,

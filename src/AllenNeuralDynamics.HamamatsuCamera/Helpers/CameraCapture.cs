@@ -1036,6 +1036,8 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         {
             var bytesPerPixel = rowBytes / width;
             byte* basePtr = (byte*)dataPtr;
+            var maxValueBeforeLUT = uint.MinValue;
+            var maxValueAfterLUT = uint.MinValue;
             if (bytesPerPixel == 1)
             {
                 fixed (byte* pLut = _mono8LookupTable)
@@ -1363,7 +1365,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
             var newMono8LookupTable = new byte[byte.MaxValue + 1];
             var newMono16LookupTable = new ushort[ushort.MaxValue + 1];
             Buffer.BlockCopy(_instance.LookupTable.Mono8, 0, newMono8LookupTable, 0, byte.MaxValue + 1);
-            Buffer.BlockCopy(_instance.LookupTable.Mono16, 0, newMono16LookupTable, 0, ushort.MaxValue + 1);
+            Buffer.BlockCopy(_instance.LookupTable.Mono16, 0, newMono16LookupTable, 0, (ushort.MaxValue + 1) * sizeof(ushort));
 
             Interlocked.Exchange(ref _mono8LookupTable, newMono8LookupTable);
             Interlocked.Exchange(ref _mono16LookupTable, newMono16LookupTable);

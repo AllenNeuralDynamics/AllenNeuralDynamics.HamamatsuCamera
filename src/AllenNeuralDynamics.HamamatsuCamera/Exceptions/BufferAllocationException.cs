@@ -3,26 +3,23 @@
 namespace AllenNeuralDynamics.HamamatsuCamera.Exceptions
 {
     /// <summary>
-    /// Thrown when failing to allocate buffer.
+    /// Thrown when failing to allocate or release buffer.
     /// </summary>
     [Serializable]
     public class BufferAllocationException : Exception
     {
+        /// <summary>
+        /// Thrown when failing to allocate buffer.
+        /// </summary>
         public BufferAllocationException()
             : base("Failed to allocate buffer.")
         { }
 
+        /// <summary>
+        /// Thrown when failing to release buffer.
+        /// </summary>
         public BufferAllocationException(string message)
             : base(message)
-        { }
-
-        public BufferAllocationException(string message, Exception innerException)
-            : base(message, innerException)
-        { }
-
-        protected BufferAllocationException(System.Runtime.Serialization.SerializationInfo info,
-                                      System.Runtime.Serialization.StreamingContext context)
-            : base(info, context)
         { }
     }
 }

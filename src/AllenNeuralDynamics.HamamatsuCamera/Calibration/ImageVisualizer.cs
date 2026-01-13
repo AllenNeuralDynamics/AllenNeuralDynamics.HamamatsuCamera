@@ -23,8 +23,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         private bool _isMovingRegion;
         private bool _isScalingRegion;
         private Point _mouseDownStartPosition;
-        private double _imageScale = 11.0;
-
+        private double _imageScale = 1.0;
         public event EventHandler RegionsChanged;
 
         [Browsable(false)]
@@ -135,11 +134,9 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         {
             if (!_isFirstFrame) return;
 
-            ImageRendererControl.ImageFullWidth = NumPixelsHorizontal / Binning;
-            ImageRendererControl.ImageFullHeight = NumPixelsVertical / Binning;
             NextCrop = GetNextCrop();
-            CurrentCropLocation = NextCrop.Location;
-
+            if(CropMode == CropMode.Manual)
+                RegionsChanged?.Invoke(this, EventArgs.Empty);
             _isFirstFrame = false;
         }
 
@@ -360,8 +357,17 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             var currMousePos = GetLocationInFrame(location);
             var tx = currMousePos.X - prevMousePos.X;
             var ty = currMousePos.Y - prevMousePos.Y;
-            var xPos = Math.Max(0, Math.Min(currentRegion.X + tx, ImageRendererControl.ImageFullWidth - 1 - currentRegion.Width));
-            var yPos = Math.Max(0, Math.Min(currentRegion.Y + ty, ImageRendererControl.ImageFullHeight - 1 - currentRegion.Height));
+            int xPos, yPos;
+            if(CropMode == CropMode.Manual && ImageRendererControl.IsSubarrayOn)
+            {
+                xPos = Math.Max(CurrentCropLocation.X, Math.Min(currentRegion.X + tx, ImageRendererControl.ImageFullWidth + CurrentCropLocation.X - 1 - currentRegion.Width));
+                yPos = Math.Max(CurrentCropLocation.Y, Math.Min(currentRegion.Y + ty, ImageRendererControl.ImageFullHeight + CurrentCropLocation.Y - 1 - currentRegion.Height));
+            }
+            else
+            {
+                xPos = Math.Max(0, Math.Min(currentRegion.X + tx, ImageRendererControl.ImageFullWidth - 1 - currentRegion.Width));
+                yPos = Math.Max(0, Math.Min(currentRegion.Y + ty, ImageRendererControl.ImageFullHeight - 1 - currentRegion.Height));
+            }
             var region = new RegionOfInterest(xPos, yPos, currentRegion.Width, currentRegion.Height);
             Regions[SelectedRegion] = region;
             _mouseDownStartPosition = currMousePos;
@@ -393,8 +399,17 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             var halfHeight = Math.Abs(edgePos.Y - centerPos.Y);
 
             // Ensure region within bounds of image
-            var minXDistToImgEdge = Math.Min(ImageRendererControl.ImageFullWidth - centerPos.X, centerPos.X);
-            var minYDistToImgEdge = Math.Min(ImageRendererControl.ImageFullHeight - centerPos.Y, centerPos.Y);
+            int minXDistToImgEdge, minYDistToImgEdge;
+            if (CropMode == CropMode.Manual && ImageRendererControl.IsSubarrayOn)
+            {
+                minXDistToImgEdge = Math.Min(ImageRendererControl.ImageFullWidth + CurrentCropLocation.X - centerPos.X, centerPos.X);
+                minYDistToImgEdge = Math.Min(ImageRendererControl.ImageFullHeight + CurrentCropLocation.Y - centerPos.Y, centerPos.Y);
+            }
+            else
+            {
+                minXDistToImgEdge = Math.Min(ImageRendererControl.ImageFullWidth - centerPos.X, centerPos.X);
+                minYDistToImgEdge = Math.Min(ImageRendererControl.ImageFullHeight - centerPos.Y, centerPos.Y);
+            }
             halfWidth = Math.Min(halfWidth, minXDistToImgEdge);
             halfHeight = Math.Min(halfHeight, minYDistToImgEdge);
 
@@ -480,10 +495,14 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             var frame_height = ImageRendererControl.ImageFullHeight;
             var image_width = ImageRendererControl.Width;
             var image_height = ImageRendererControl.Height;
-
-            return new Point(
-                Math.Max(0, Math.Min((int)(x * frame_width / (float)image_width), frame_width - 1)),
-                Math.Max(0, Math.Min((int)(y * frame_height / (float)image_height), frame_height - 1)));
+            var xPos = Math.Max(0, Math.Min((int)(x * frame_width / (float)image_width), frame_width - 1));
+            var yPos = Math.Max(0, Math.Min((int)(y * frame_height / (float)image_height), frame_height - 1));
+            if(CropMode == CropMode.Manual && ImageRendererControl.IsSubarrayOn)
+            {
+                xPos += CurrentCropLocation.X;
+                yPos += CurrentCropLocation.Y;
+            }
+            return new Point(xPos, yPos);
         }
 
 
@@ -545,15 +564,22 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         /// <param name="manualCrop">New manual crop.</param>
         internal void UpdateSubarray(CropSettings manualCrop)
         {
+            ImageRendererControl.IsSubarrayOn = manualCrop.Mode;
             if(CropMode == CropMode.Auto || !manualCrop.Mode)
             {
                 ImageRendererControl.ImageFullWidth = NumPixelsHorizontal / Binning;
                 ImageRendererControl.ImageFullHeight = NumPixelsVertical / Binning;
+                if (CropMode == CropMode.Auto)
+                {
+                    NextCrop = GetNextCrop();
+                    CurrentCropLocation = NextCrop.Location;
+                }
             }
             else
             {
                 ImageRendererControl.ImageFullWidth = (int)(manualCrop.HSize / Binning);
                 ImageRendererControl.ImageFullHeight = (int)(manualCrop.VSize / Binning);
+                CurrentCropLocation = new Point((int)manualCrop.HPos, (int)manualCrop.VPos);
             }
         }
 
