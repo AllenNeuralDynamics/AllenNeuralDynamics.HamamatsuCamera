@@ -76,7 +76,13 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Visualizers
             var yMax = _interleavedBuffer.MaxY;
             UpdateAxes(xMin, xMax, yMin, yMax, InterleavedPlot);
             for (var i = 0; i < _numSignals; i++)
-                UpdateAxes(xMin, xMax, yMin, yMax, DeinterleavedPlots[i]);
+            {
+                var deintXMin = _deinterleavedBuffers[i].MinX;
+                var deintXMax = _deinterleavedBuffers[i].MaxX;
+                var deintYMin = _deinterleavedBuffers[i].MinY;
+                var deintYMax = _deinterleavedBuffers[i].MaxY;
+                UpdateAxes(deintXMin, deintXMax, deintYMin, deintYMax, DeinterleavedPlots[i]);
+            }
         }
 
         /// <summary>
