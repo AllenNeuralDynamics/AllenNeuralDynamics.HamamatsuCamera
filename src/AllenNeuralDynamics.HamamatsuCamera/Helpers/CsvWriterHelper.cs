@@ -48,7 +48,9 @@ namespace AllenNeuralDynamics.HamamatsuCamera
                     nameof(FramePacket.Left),
                     nameof(FramePacket.Top),
                     nameof(FramePacket.FrameIndex),
-                    nameof(FramePacket.ElapsedSeconds)
+                    nameof(FramePacket.ElapsedSeconds),
+                    nameof(FramePacket.CameraTimestamp),
+                    nameof(FramePacket.ComputerTimestamp)
                 };
 
             if (regions == null || regions.Count == 0)

@@ -17,6 +17,8 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Models
         public int Height { get; set; }
         public int RowBytes { get; set; }
         public ulong FrameIndex { get; set; }              // 64-bit unwrapped frame ID
+        public double CameraTimestamp { get; set; }
+        public double ComputerTimestamp { get; set; }
         public double ElapsedSeconds { get; set; }          // timestamp since acquisition start
         public int DeinterleaveCount { get; set; }
 
@@ -28,7 +30,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Models
             if (RoiAverages == null || RoiAverages.Length == 0)
                 return $"{Width},{Height},{Left},{Top},{FrameIndex},{ElapsedSeconds}";
 
-            return $"{Width},{Height},{Left},{Top},{FrameIndex},{ElapsedSeconds},{string.Join(",", RoiAverages)}";
+            return $"{Width},{Height},{Left},{Top},{FrameIndex},{ElapsedSeconds},{CameraTimestamp},{ComputerTimestamp},{string.Join(",", RoiAverages)}";
         }
     }
 }

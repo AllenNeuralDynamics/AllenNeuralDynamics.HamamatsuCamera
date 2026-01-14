@@ -1,6 +1,7 @@
 ﻿using AllenNeuralDynamics.HamamatsuCamera.API;
 using AllenNeuralDynamics.HamamatsuCamera.Exceptions;
 using AllenNeuralDynamics.HamamatsuCamera.Models;
+using Bonsai;
 using OpenCV.Net;
 using System;
 using System.Collections.Generic;
@@ -974,7 +975,9 @@ namespace AllenNeuralDynamics.HamamatsuCamera
                     RowBytes = acq.RowBytes,
                     FrameIndex = frameIndex,
                     DeinterleaveCount = _processingDeinterleaveCount,
-                    ElapsedSeconds = elapsed
+                    ElapsedSeconds = elapsed,
+                    CameraTimestamp = ts,
+                    ComputerTimestamp = HighResolutionScheduler.Now.DateTime.TimeOfDay.TotalSeconds
                 };
 
                 if (IsConfigMode)
@@ -1073,8 +1076,6 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         {
             var bytesPerPixel = rowBytes / width;
             byte* basePtr = (byte*)dataPtr;
-            var maxValueBeforeLUT = uint.MinValue;
-            var maxValueAfterLUT = uint.MinValue;
             if (bytesPerPixel == 1)
             {
                 fixed (byte* pLut = _mono8LookupTable)
