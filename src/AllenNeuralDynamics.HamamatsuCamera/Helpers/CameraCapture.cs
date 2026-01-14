@@ -24,6 +24,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         private const double _targetConfigModeRate = 40;    // 40Hz
         private const int _channelCapacity = 4096;
         private readonly C13440 _instance;
+        private List<RegionOfInterest> _regionsOfInterest;
         private Channel<AcquisitionPacket> _acqToProc;     // Single-writer, single-reader
         private Channel<FramePacket> _procToWrite;     // Single-writer, single-reader
         private Channel<IFrameContainer> _procToRx;
@@ -37,6 +38,8 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         private Thread _rxThread;
         private Thread _writingThread;
         private double _internalFrameRate;
+        private int _xOffset;
+        private int _yOffset;
         private int _width;
         private int _height;
         private int _rowBytes;
@@ -119,7 +122,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
             var fullPath = Path.GetFullPath(_instance.SettingsPath);
             using (var reader = XmlReader.Create(fullPath))
             {
-                _instance.Regions = new List<RegionOfInterest>();
+                _regionsOfInterest = new List<RegionOfInterest>();
                 while (reader.Read())
                 {
                     if (reader.Name == "Setting" && reader.HasAttributes && reader.AttributeCount == 2)
@@ -129,7 +132,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
                     }
                     if (reader.Name == "Region" && reader.HasAttributes && reader.AttributeCount == 4)
                     {
-                        _instance.Regions.Add(new RegionOfInterest(int.Parse(reader[0]), int.Parse(reader[1]), int.Parse(reader[2]), int.Parse(reader[3])));
+                        _regionsOfInterest.Add(new RegionOfInterest(int.Parse(reader[0]), int.Parse(reader[1]), int.Parse(reader[2]), int.Parse(reader[3])));
                         reader.MoveToElement();
                     }
                     if (reader.Name == "CropMode" && reader.HasAttributes && reader.AttributeCount == 1)
@@ -543,6 +546,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         /// </summary>
         private void ConfigProps()
         {
+            ConfigRegions();
             GetSetPixelType();
             GetImageData();
         }
@@ -607,16 +611,49 @@ namespace AllenNeuralDynamics.HamamatsuCamera
             return propId == DCAMIDPROP.SUBARRAYHPOS || propId == DCAMIDPROP.SUBARRAYHSIZE || propId == DCAMIDPROP.SUBARRAYVPOS || propId == DCAMIDPROP.SUBARRAYVSIZE || propId == DCAMIDPROP.SUBARRAYMODE;
         }
 
+        private void ConfigRegions()
+        {
+            var subarrayHPosProp = _instance.CameraProps.FirstOrDefault(prop => prop.m_idProp == DCAMIDPROP.SUBARRAYHPOS) ?? throw new PropertyException();
+            var subarrayVPosProp = _instance.CameraProps.FirstOrDefault(prop => prop.m_idProp == DCAMIDPROP.SUBARRAYVPOS) ?? throw new PropertyException();
+            var subarrayModeProp = _instance.CameraProps.FirstOrDefault(prop => prop.m_idProp == DCAMIDPROP.SUBARRAYMODE) ?? throw new PropertyException();
+            var hPos = 0.0;
+            var vPos = 0.0;
+            var mode = 0.0;
+            subarrayHPosProp.getvalue(ref hPos);
+            subarrayVPosProp.getvalue(ref vPos);
+            subarrayModeProp.getvalue(ref mode);
+
+            if(mode == DCAMPROP.MODE.OFF)
+            {
+                _xOffset = 0;
+                _yOffset = 0;
+            }
+            else
+            {
+                _xOffset = (int)hPos;
+                _yOffset = (int)vPos;
+            }
+            _regionsOfInterest = new List<RegionOfInterest>(_instance.Regions);
+
+            for (var i = 0; i < _regionsOfInterest.Count; i++)
+            {
+                var region = _regionsOfInterest[i];
+                _regionsOfInterest[i] = new RegionOfInterest()
+                {
+                    X = region.X - _xOffset,
+                    Y = region.Y - _yOffset,
+                    Width = region.Width,
+                    Height = region.Height
+                };
+            }
+        }
+
         /// <summary>
         /// Get the pixel type and if it is not supported, set it to Mono16
         /// </summary>
         private void GetSetPixelType()
         {
-            var pixelTypeProp = _instance.CameraProps.FirstOrDefault(prop => prop.m_idProp == DCAMIDPROP.IMAGE_PIXELTYPE);
-
-            if (pixelTypeProp == null)
-                throw new PropertyException();
-
+            var pixelTypeProp = _instance.CameraProps.FirstOrDefault(prop => prop.m_idProp == DCAMIDPROP.IMAGE_PIXELTYPE) ?? throw new PropertyException();
             var pixelType = 0.0;
             pixelTypeProp.getvalue(ref pixelType);
 
@@ -668,30 +705,30 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         /// </summary>
         private void CheckRegions()
         {
-            for (var i = _instance.Regions.Count - 1; i >= 0; i--)
+            for (var i = _regionsOfInterest.Count - 1; i >= 0; i--)
             {
-                var region = _instance.Regions[i];
+                var region = _regionsOfInterest[i];
 
                 // Fully outside, remove
                 if (region.X >= _width || region.Y >= _height)
                 {
-                    _instance.Regions.RemoveAt(i);
+                    _regionsOfInterest.RemoveAt(i);
                     continue;
                 }
 
+                if (region.X < 0)
+                    region.X = 0;
+                if (region.Y < 0)
+                    region.Y = 0;
                 // Partially outside, clamp to crop bounds
                 if (region.X + region.Width > _width)
-                {
                     region.Width = _width - region.X;
-                }
 
                 if (region.Y + region.Height > _height)
-                {
                     region.Height = _height - region.Y;
-                }
 
                 // Write back the modified struct
-                _instance.Regions[i] = region;
+                _regionsOfInterest[i] = region;
             }
         }
 
@@ -1100,7 +1137,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
             {
                 fixed (byte* pLut = _mono8LookupTable)
                 {
-                    if (_instance.Regions == null || _instance.Regions.Count == 0)
+                    if (_regionsOfInterest == null || _regionsOfInterest.Count == 0)
                     {
                         var results = new double[1];
 
@@ -1148,11 +1185,11 @@ namespace AllenNeuralDynamics.HamamatsuCamera
                             pRow += rowBytes;
                         }
 
-                        var results = new double[_instance.Regions.Count];
+                        var results = new double[_regionsOfInterest.Count];
 
-                        for (int r = 0; r < _instance.Regions.Count; r++)
+                        for (int r = 0; r < _regionsOfInterest.Count; r++)
                         {
-                            var roi = _instance.Regions[r];
+                            var roi = _regionsOfInterest[r];
 
                             long sum = 0;
                             int pixelCount = roi.Width * roi.Height;
@@ -1185,7 +1222,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
             {
                 fixed (ushort* pLut = _mono16LookupTable)
                 {
-                    if (_instance.Regions == null || _instance.Regions.Count == 0)
+                    if (_regionsOfInterest == null || _regionsOfInterest.Count == 0)
                     {
                         var results = new double[1];
 
@@ -1233,11 +1270,11 @@ namespace AllenNeuralDynamics.HamamatsuCamera
                             pRow = (ushort*)((byte*)pRow + rowBytes);
                         }
 
-                        var results = new double[_instance.Regions.Count];
+                        var results = new double[_regionsOfInterest.Count];
 
-                        for (int r = 0; r < _instance.Regions.Count; r++)
+                        for (int r = 0; r < _regionsOfInterest.Count; r++)
                         {
-                            var roi = _instance.Regions[r];
+                            var roi = _regionsOfInterest[r];
 
                             long sum = 0;
                             int pixelCount = roi.Width * roi.Height;
@@ -1292,7 +1329,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
         {
             CsvWriterHelper csvWriter = null;
             if (_includeCsvWriter)
-                csvWriter = new CsvWriterHelper(_csvWriterProperties, _instance.Regions);
+                csvWriter = new CsvWriterHelper(_csvWriterProperties, _regionsOfInterest);
 
             TiffWriterHelper tiffWriter = null;
             if (_includeTiffWriter)
