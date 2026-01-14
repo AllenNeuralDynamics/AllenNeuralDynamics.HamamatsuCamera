@@ -2,6 +2,7 @@
 <WorkflowBuilder Version="2.9.0"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xmlns:p1="clr-namespace:AllenNeuralDynamics.HamamatsuCamera;assembly=AllenNeuralDynamics.HamamatsuCamera"
+                 xmlns:p2="clr-namespace:AllenNeuralDynamics.HamamatsuCamera.Nodes;assembly=AllenNeuralDynamics.HamamatsuCamera"
                  xmlns="https://bonsai-rx.org/2018/workflow">
   <Workflow>
     <Nodes>
@@ -30,11 +31,19 @@
           <p1:FramesPerTiff>1000</p1:FramesPerTiff>
         </Combinator>
       </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="p2:Frames" />
+      </Expression>
+      <Expression xsi:type="Combinator">
+        <Combinator xsi:type="p2:FrameBundles" />
+      </Expression>
     </Nodes>
     <Edges>
       <Edge From="0" To="1" Label="Source1" />
       <Edge From="1" To="2" Label="Source1" />
       <Edge From="1" To="3" Label="Source1" />
+      <Edge From="1" To="4" Label="Source1" />
+      <Edge From="1" To="5" Label="Source1" />
     </Edges>
   </Workflow>
 </WorkflowBuilder>

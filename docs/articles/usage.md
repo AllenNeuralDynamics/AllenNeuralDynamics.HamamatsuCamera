@@ -37,3 +37,15 @@ Visualizers enable real-time inspection of acquired data. Currently, only the Pr
 - [Processing Visualizer](~/articles/processing_visualizer.md)
 
 ## Workflows
+
+At the core of workflows using this package are the C13440 node followed by the Processing node. This provides camera initialization, configuration, and image acquisition followed by signal extraction and visualization.
+
+![Core Workflow](~/workflows/c13440_core.svg)
+
+Typically this is followed up by the CsvWriter and/or the TiffWriter nodes where the CsvWriter is responsible for writing the frame metadata and activity data to a .csv while the TiffWriter is responsible for writing the image data to multi-page split BigTiff files. 
+
+![Standard Workflow](~/workflows/c13440_csv_tiff.svg)
+
+The Frames and FrameBundles nodes can be used to extract the IplImages from the IFrameContainer to be used with other Bonsai-rx operators. 
+
+![IplImage Workflow](~/workflows/c13440_iplimage.svg)
