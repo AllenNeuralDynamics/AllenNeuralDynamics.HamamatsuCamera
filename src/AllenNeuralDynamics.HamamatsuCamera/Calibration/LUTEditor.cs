@@ -26,6 +26,8 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         private KeyValuePair SelectedPair;
 
         public event EventHandler LUTChanged;
+        public event EventHandler<LUTPathChangedEventArgs> LUTSaved;
+        public event EventHandler<LUTPathChangedEventArgs> LUTLoaded;
         private const int MetaDataOffset = 3;           // Number of columns of MetaData in the output .csv file
         private const string ListSeparator = ",";       // List separator for writing to different columns of a .csv file
 
@@ -296,10 +298,29 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         /// <param name="e"></param>
         private void Save_Button_Click(object sender, EventArgs e)
         {
+            var fileName = SaveLUT();
+            LUTSaved?.Invoke(this, new LUTPathChangedEventArgs(fileName));
+        }
+
+        /// <summary>
+        /// Load button click handler. Populate the Points of interest based on the
+        /// user selected .csv file. Then update the LUT.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Load_Button_Click(object sender, EventArgs e)
+        {
+            var fileName = LoadLUT();
+            LUTLoaded?.Invoke(this, new LUTPathChangedEventArgs(fileName));
+        }
+
+        internal string SaveLUT()
+        {
+            var fileName = "LookupTable.csv";
             try
             {
                 using var saveFileDialog = new SaveFileDialog();
-                saveFileDialog.FileName = "LookupTable.csv";
+                saveFileDialog.FileName = fileName;
                 saveFileDialog.Filter = "CSV files|*.csv|All files|*.*";
                 var result = saveFileDialog.ShowDialog(this);
                 if (result == DialogResult.OK)
@@ -329,21 +350,18 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
 
                     writer.Close();
                 }
+                fileName = saveFileDialog.FileName;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 ConsoleLogger.LogError(ex);
             }
+            return fileName;
         }
 
-        /// <summary>
-        /// Load button click handler. Populate the Points of interest based on the
-        /// user selected .csv file. Then update the LUT.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Load_Button_Click(object sender, EventArgs e)
+        internal string LoadLUT()
         {
+            var fileName = "LookupTable.csv";
             try
             {
                 using (var openFileDialog = new OpenFileDialog())
@@ -378,6 +396,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                             }
                         }
                     }
+                    fileName = openFileDialog.FileName;
                 }
                 LoadLUT(_pointsOfInterest);
             }
@@ -385,6 +404,18 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             {
                 ConsoleLogger.LogError(ex);
             }
+            return fileName;
         }
     }
+
+    public class LUTPathChangedEventArgs : EventArgs
+    {
+        public string FileName { get; }
+
+        public LUTPathChangedEventArgs(string fileName)
+        {
+            FileName = fileName;
+        }
+    }
+
 }

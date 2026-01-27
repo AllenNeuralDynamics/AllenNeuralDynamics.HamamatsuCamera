@@ -123,7 +123,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
             var fullPath = Path.GetFullPath(_instance.SettingsPath);
             using (var reader = XmlReader.Create(fullPath))
             {
-                _regionsOfInterest = new List<RegionOfInterest>();
+                _instance.Regions = new List<RegionOfInterest>();
                 while (reader.Read())
                 {
                     if (reader.Name == "Setting" && reader.HasAttributes && reader.AttributeCount == 2)
@@ -133,7 +133,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera
                     }
                     if (reader.Name == "Region" && reader.HasAttributes && reader.AttributeCount == 4)
                     {
-                        _regionsOfInterest.Add(new RegionOfInterest(int.Parse(reader[0]), int.Parse(reader[1]), int.Parse(reader[2]), int.Parse(reader[3])));
+                        _instance.Regions.Add(new RegionOfInterest(int.Parse(reader[0]), int.Parse(reader[1]), int.Parse(reader[2]), int.Parse(reader[3])));
                         reader.MoveToElement();
                     }
                     if (reader.Name == "CropMode" && reader.HasAttributes && reader.AttributeCount == 1)
@@ -519,13 +519,15 @@ namespace AllenNeuralDynamics.HamamatsuCamera
                 throw new OpenCameraException();
             }
 
-            if (_instance.CameraProps == null && !string.IsNullOrEmpty(_instance.SettingsPath))
-            {
-                InitProps();
-                TryLoadSettings();
-            }
-            else
-                InitProps();
+            InitProps();
+            TryLoadSettings();
+            //if (_instance.CameraProps == null && !string.IsNullOrEmpty(_instance.SettingsPath))
+            //{
+            //    InitProps();
+            //    TryLoadSettings();
+            //}
+            //else
+            //    InitProps();
 
             isInitialized = true;
         }
@@ -566,30 +568,37 @@ namespace AllenNeuralDynamics.HamamatsuCamera
                 propManagers.Add(currentPropManager.Clone());
             }
             _instance.CameraProps = propManagers.OrderBy(prop => prop.m_attr.iGroup);
-            if (_instance.StoredSettings != null)
+            _instance.Regions = new List<RegionOfInterest>();
+            _instance.LookupTable = new LookupTable();
+            _instance.PointsOfInterest = new Dictionary<ushort, ushort>()
             {
-                var subarrayProps = _instance.CameraProps.Where(prop => GetIsSubarrayProp(prop.m_idProp));
-                foreach (var prop in subarrayProps)
-                {
-                    prop.update_attr();
-                    var isReadonly = prop.is_attr_readonly();
-                    var isPropertyStored = _instance.StoredSettings.TryGetValue(prop.m_idProp.getidprop(), out var storedValue);
-                    if (!isReadonly && isPropertyStored)
-                        prop.setvalue(storedValue);
-                }
+                [0] = 0,
+                [ushort.MaxValue] = ushort.MaxValue
+            };
+            //if (_instance.StoredSettings != null)
+            //{
+            //    var subarrayProps = _instance.CameraProps.Where(prop => GetIsSubarrayProp(prop.m_idProp));
+            //    foreach (var prop in subarrayProps)
+            //    {
+            //        prop.update_attr();
+            //        var isReadonly = prop.is_attr_readonly();
+            //        var isPropertyStored = _instance.StoredSettings.TryGetValue(prop.m_idProp.getidprop(), out var storedValue);
+            //        if (!isReadonly && isPropertyStored)
+            //            prop.setvalue(storedValue);
+            //    }
 
-                var otherProps = _instance.CameraProps.Where(prop => !GetIsSubarrayProp(prop.m_idProp));
-                foreach (var prop in otherProps)
-                {
-                    prop.update_attr();
-                    var isReadonly = prop.is_attr_readonly();
-                    var isPropertyStored = _instance.StoredSettings.TryGetValue(prop.m_idProp.getidprop(), out var storedValue);
-                    if (!isReadonly && isPropertyStored)
-                        prop.setvalue(storedValue);
-                }
+            //    var otherProps = _instance.CameraProps.Where(prop => !GetIsSubarrayProp(prop.m_idProp));
+            //    foreach (var prop in otherProps)
+            //    {
+            //        prop.update_attr();
+            //        var isReadonly = prop.is_attr_readonly();
+            //        var isPropertyStored = _instance.StoredSettings.TryGetValue(prop.m_idProp.getidprop(), out var storedValue);
+            //        if (!isReadonly && isPropertyStored)
+            //            prop.setvalue(storedValue);
+            //    }
 
-                UpdateLookupTable();
-            }
+            //    UpdateLookupTable();
+            //}
         }
 
         /// <summary>

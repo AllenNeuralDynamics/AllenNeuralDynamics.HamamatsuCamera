@@ -69,6 +69,9 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         private readonly CropSettings ManualCrop = new CropSettings();
         private readonly Timer _temperatureTimer;
         private readonly bool _failedToLoad;
+        private Dictionary<int, double> _storedSettings = new Dictionary<int, double>();
+        private Dictionary<ushort, ushort> _storedPointsOfInterest = new Dictionary<ushort, ushort>();
+        private List<RegionOfInterest> _storedRegions;
 
         #endregion
 
@@ -115,12 +118,33 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         {
             TryInitAndOpen();
             CameraProps = _instance.CameraProps;
+            // Local storage of settings and points of interest to compare to when the form closes to see if anything changed.
+            foreach(var prop in CameraProps)
+            {
+                var key = prop.m_idProp.getidprop();
+                var value = 0.0;
+                prop.getvalue(ref value);
+                _storedSettings[key] = value;
+            }
+
+            _storedPointsOfInterest = new Dictionary<ushort, ushort>(_instance.PointsOfInterest);
+
             Settings_Panel.Controls.Add(CreateSettingsTable());
             if (_instance.Regions != null)
+            {
+                _storedRegions = new List<RegionOfInterest>(_instance.Regions);
                 Image_Visualizer.Regions = new List<RegionOfInterest>(_instance.Regions);   // Need a clone here to prevent CameraCapture from altering Regions in the UI while we are configuring.
+            }
+            else
+            {
+                _storedRegions = new List<RegionOfInterest>();
+                Image_Visualizer.Regions = new List<RegionOfInterest>();
+            }
             UpdateSubarray();
             Image_Visualizer.RegionsChanged += Image_Visualizer_RegionsChanged;
             LUTControl.LoadLUT(_instance.PointsOfInterest);
+            LUTControl.LUTSaved += LUTControl_LUTSaved;
+            LUTControl.LUTLoaded += LUTControl_LUTLoaded;
         }
 
         private bool TryInitAndOpen()
@@ -723,6 +747,16 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                             nameValuePair.RefreshValue();
 
                         UpdateSubarray();
+                        _instance.SettingsPath = openFileDialog.FileName;
+                        _instance.Regions = new List<RegionOfInterest>(Image_Visualizer.Regions);
+                        foreach (var prop in CameraProps)
+                        {
+                            var key = prop.m_idProp.getidprop();
+                            var value = 0.0;
+                            prop.getvalue(ref value);
+                            _storedSettings[key] = value;
+                        }
+                        _storedRegions = new List<RegionOfInterest>(Image_Visualizer.Regions);
                     }
                 }
             }
@@ -770,7 +804,49 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             try
             {
                 if (_failedToLoad) return;
-                StoreProps();
+                var cameraSettingsChanged = CameraSettingsChanged();
+                var regionsChanged = RegionsChanged();
+                var pointsOfInterestChanged = PointsOfInterestChanged();
+                if (cameraSettingsChanged || regionsChanged)
+                {
+                    // Save settings
+                    var result = MessageBox.Show("One or more camera settings have been modified.\n\n" +
+                        "If you don't want to save, the camera will revert to its previous configuration\n\n" +
+                        "Do you want to save your changes?",
+                        "Unsaved Changes",
+                        MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                    switch(result)
+                    {
+                        case DialogResult.Yes:
+                            SaveSettings();
+                            break;
+                        case DialogResult.No:
+                            break;
+                        case DialogResult.Cancel:
+                            e.Cancel = true;
+                            return;
+                    }
+                }
+
+                if (pointsOfInterestChanged)
+                {
+                    var result = MessageBox.Show("The LUT has been modified.\n\n" +
+                        "If you don't want to save, the LUT will revert to its previous configuration\n\n" +
+                        "Do you want to save your changes?",
+                        "Unsaved Changes",
+                        MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+                    switch (result)
+                    {
+                        case DialogResult.Yes:
+                            _instance.LookupTablePath = LUTControl.SaveLUT();
+                            break;
+                        case DialogResult.No:
+                            break;
+                        case DialogResult.Cancel:
+                            e.Cancel = true;
+                            return;
+                    }
+                }
                 _temperatureTimer.Stop();
                 _temperatureTimer.Dispose();
                 if (Subscription != null)
@@ -783,50 +859,11 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             {
                 ConsoleLogger.LogError(ex);
             }
-            finally
-            {
-                base.OnFormClosing(e);
-            }
+
+            base.OnFormClosing(e);
         }
 
-        /// <summary>
-        /// Stores camera properties into the <see cref="C13440"/> instance. Also,
-        /// stores the regions of interest, lookup table, and points of interest.
-        /// </summary>
-        private void StoreProps()
-        {
-            try
-            {
-                if (_instance.StoredSettings == null)
-                    _instance.StoredSettings = new Dictionary<int, double>();
-                foreach(var prop in CameraProps)
-                {
-                    var key = prop.m_idProp.getidprop();
-                    var value = 0.0;
-                    prop.getvalue(ref value);
-                    _instance.StoredSettings[key] = value;
-                }
-                _instance.Regions = Image_Visualizer.Regions;
-                _instance.LookupTable = LUTControl.LookupTable;
-                _instance.PointsOfInterest = LUTControl.PointsOfInterest;
-            }
-            catch(Exception ex)
-            {
-                ConsoleLogger.LogError(ex);
-            }
-        }
-
-        #endregion
-
-        #region Event Handling
-
-        /// <summary>
-        /// Save button click event handler. Saves camera settings, regions of interest, and crop mode
-        /// to an .xml file.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Save_Button_Click(object sender, EventArgs e)
+        private void SaveSettings()
         {
             try
             {
@@ -869,12 +906,91 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
                         writer.WriteEndDocument();
                         writer.Close();
                     }
+                    _instance.SettingsPath = saveFileDialog.FileName;
+                    _instance.Regions = new List<RegionOfInterest>(Image_Visualizer.Regions);
+                    foreach (var prop in CameraProps)
+                    {
+                        var key = prop.m_idProp.getidprop();
+                        var value = 0.0;
+                        prop.getvalue(ref value);
+                        _storedSettings[key] = value;
+                    }
+                    _storedRegions = new List<RegionOfInterest>(Image_Visualizer.Regions);
                 }
             }
             catch (Exception ex)
             {
                 ConsoleLogger.LogError(ex);
             }
+        }
+
+        private bool CameraSettingsChanged()
+        {
+            foreach (var prop in CameraProps)
+            {
+                var attr = new DCAMPROPATTRIBUTE(prop.m_attr.attribute);
+                if (!attr.has_attr(DCAMPROPATTRIBUTE.WRITABLE))
+                    continue;
+                var key = prop.m_idProp.getidprop();
+
+                if (!_storedSettings.TryGetValue(key, out var oldValue))
+                    return true;
+
+                double currentValue = 0.0;
+                prop.getvalue(ref currentValue);
+                if (!AreEqual(oldValue, currentValue))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool AreEqual(double a, double b)
+        {
+            const double epsilon = 0.000001;
+            return Math.Abs(a - b) < epsilon;
+        }
+
+        private bool RegionsChanged()
+        {
+            if (_storedRegions.Count != Image_Visualizer.Regions.Count)
+                return true;
+
+            return !_storedRegions.SequenceEqual(Image_Visualizer.Regions);
+        }
+
+        private bool PointsOfInterestChanged()
+        {
+            var current = LUTControl.PointsOfInterest;
+
+            if (_storedPointsOfInterest.Count != current.Count)
+                return true;
+
+            foreach (var kv in _storedPointsOfInterest)
+            {
+                if (!current.TryGetValue(kv.Key, out var currentValue))
+                    return true; // key removed
+
+                if (kv.Value != currentValue)
+                    return true; // value changed
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Event Handling
+
+        /// <summary>
+        /// Save button click event handler. Saves camera settings, regions of interest, and crop mode
+        /// to an .xml file.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Save_Button_Click(object sender, EventArgs e)
+        {
+            SaveSettings();
         }
 
         /// <summary>
@@ -932,6 +1048,18 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
         {
             _instance.LookupTable = LUTControl.LookupTable;
             _instance.Capture.UpdateLookupTable();
+        }
+
+        private void LUTControl_LUTLoaded(object sender, LUTPathChangedEventArgs e)
+        {
+            _instance.LookupTablePath = e.FileName;
+            _storedPointsOfInterest = new Dictionary<ushort, ushort>(LUTControl.PointsOfInterest);
+        }
+
+        private void LUTControl_LUTSaved(object sender, LUTPathChangedEventArgs e)
+        {
+            _instance.LookupTablePath = e.FileName;
+            _storedPointsOfInterest = new Dictionary<ushort, ushort>(LUTControl.PointsOfInterest);
         }
 
         /// <summary>
