@@ -37,7 +37,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: ShowSplash\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
@@ -56,7 +56,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"Error: DoShowSplash\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
 
@@ -84,7 +84,7 @@ namespace AllenNeuralDynamics.HamamatsuCamera.Calibration
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: CloseSplash\nMessage: {ex.Message}");
+                ConsoleLogger.LogError(ex);
             }
         }
     }
